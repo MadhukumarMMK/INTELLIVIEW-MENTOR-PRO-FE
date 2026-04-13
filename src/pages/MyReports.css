@@ -1,0 +1,244 @@
+/* Using the same global variables for theme consistency */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* --- Main Wrapper & Header --- */
+.reports-wrapper {
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--background-color);
+  min-height: calc(100vh - var(--nav-height));
+  padding: 2rem;
+}
+
+.reports-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+.reports-header h1 {
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.reports-header p {
+  color: var(--text-light);
+  font-size: 1rem;
+}
+
+/* --- Status & Loader (reusing from other components) --- */
+.status-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem;
+  text-align: center;
+}
+.loader {
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid var(--primary-color);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1.5s linear infinite;
+}
+.status-container p {
+  margin-top: 1rem;
+  font-weight: 500;
+  color: var(--text-light);
+}
+.no-reports, .error-message {
+  background-color: var(--surface-color);
+  padding: 2rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+}
+.error-message {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+/* --- Reports Grid & Cards --- */
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.report-card {
+  background-color: var(--surface-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.report-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.report-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.report-card .card-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+/* Reusing level-badge styles from Dashboard */
+.level-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.level-badge.level-easy { background-color: #d4edda; color: #155724; }
+.level-badge.level-medium { background-color: #fff3cd; color: #856404; }
+.level-badge.level-hard { background-color: #f8d7da; color: #721c24; }
+
+.report-card .card-body {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.score-circle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.score-circle span {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  background: var(--surface-color);
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.score-circle small {
+  font-size: 1rem;
+  color: var(--text-light);
+  margin-left: 2px;
+}
+
+.report-details p {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-dark);
+}
+.report-details span {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* --- Card Footer --- */
+.report-card .card-footer {
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--primary-color);
+}
+
+/* --- Best Ribbon (tilted top-left corner) --- */
+.report-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.best-highlight {
+  border-color: var(--success) !important;
+  box-shadow: 0 0 0 1px var(--success), var(--shadow-sm);
+}
+
+.badge-best-ribbon {
+  position: absolute;
+  top: 14px;
+  left: -32px;
+  background: var(--success);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 36px;
+  transform: rotate(-45deg);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+}
+
+.badge-worst {
+  background: var(--danger);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* --- Slot Info Bar --- */
+.slot-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: var(--surface-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+}
+
+.slot-info span {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.delete-worst-btn {
+  background: #da3633;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.delete-worst-btn:hover {
+  background: #f85149;
+}
+
+.slot-hint {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+  background: rgba(210, 153, 34, 0.1);
+  border: 1px solid rgba(210, 153, 34, 0.3);
+  border-radius: 8px;
+  color: var(--text-light);
+  font-size: 0.85rem;
+}

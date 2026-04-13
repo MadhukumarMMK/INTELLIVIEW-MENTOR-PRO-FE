@@ -1,0 +1,113 @@
+.intelli-loader-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem 2rem;
+  width: 100%;
+}
+
+.intelli-loader-wrapper.compact {
+  padding: 2rem 1rem;
+}
+
+.intelli-loader-wrapper.fullscreen {
+  min-height: 80vh;
+}
+
+.intelli-loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  animation: intelli-fadeIn 0.4s ease;
+}
+
+/* Pulsing Logo */
+.intelli-logo-pulse {
+  width: 56px;
+  height: 56px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intelli-logo-text {
+  width: 44px;
+  height: 44px;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  z-index: 2;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.intelli-ring {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  border: 2px solid var(--primary);
+  opacity: 0;
+  animation: intelli-pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Wave Bar — ocean themed */
+.intelli-wave-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+}
+
+.intelli-wave-bar span {
+  width: 4px;
+  background: var(--primary);
+  border-radius: 2px;
+  animation: intelli-wave 1.2s ease-in-out infinite;
+}
+
+.intelli-wave-bar span:nth-child(1) { animation-delay: 0s; }
+.intelli-wave-bar span:nth-child(2) { animation-delay: 0.15s; }
+.intelli-wave-bar span:nth-child(3) { animation-delay: 0.3s; }
+.intelli-wave-bar span:nth-child(4) { animation-delay: 0.45s; }
+.intelli-wave-bar span:nth-child(5) { animation-delay: 0.6s; }
+
+/* Message */
+.intelli-loader-msg {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+/* Animations */
+@keyframes intelli-pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(0.8); opacity: 0; }
+}
+
+@keyframes intelli-wave {
+  0%, 100% { height: 4px; opacity: 0.4; }
+  50% { height: 18px; opacity: 1; }
+}
+
+@keyframes intelli-fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Compact size */
+.intelli-loader-wrapper.compact .intelli-logo-pulse { width: 40px; height: 40px; }
+.intelli-loader-wrapper.compact .intelli-logo-text { width: 32px; height: 32px; font-size: 0.85rem; border-radius: 8px; }
+.intelli-loader-wrapper.compact .intelli-ring { width: 40px; height: 40px; border-radius: 12px; }
+.intelli-loader-wrapper.compact .intelli-wave-bar { height: 14px; }
+.intelli-loader-wrapper.compact .intelli-wave-bar span { width: 3px; }
+.intelli-loader-wrapper.compact .intelli-loader-msg { font-size: 0.78rem; }

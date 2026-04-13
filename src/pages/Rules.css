@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+/* --- Main Wrapper --- */
+.rules-wrapper {
+ display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+ background-color: var(--background-color);
+ font-family: 'Poppins', sans-serif;
+ padding: 2rem;
+}
+.status-container {
+  width: 100%;
+}
+.loader {
+ border: 6px solid var(--border-color);
+ border-top: 6px solid var(--primary-color);
+ border-radius: 50%;
+ width: 50px;
+ height: 50px;
+ animation: spin 1.5s linear infinite;
+}
+@keyframes spin {
+ 0% { transform: rotate(0deg); }
+ 100% { transform: rotate(360deg); }
+}
+
+/* --- Rules Card --- */
+.rules-card {
+ max-width: 700px;
+ width: 100%;
+ background: var(--surface-color);
+ padding: 2.5rem 3rem;
+ border-radius: var(--border-radius);
+ box-shadow: var(--card-shadow);
+ text-align: center;
+ animation: fadeInUp 0.7s ease-out;
+}
+.card-header svg {
+ width: 50px;
+ height: 50px;
+ color: var(--primary-color);
+ margin-bottom: 0.5rem;
+}
+.card-header h2 {
+ font-weight: 600;
+ font-size: 2rem;
+ color: var(--text-dark);
+}
+.card-header p {
+ color: var(--text-light);
+ margin-top: 0.5rem;
+ margin-bottom: 2rem;
+}
+
+/* --- Interview Details Box --- */
+.details-box {
+ background-color: var(--background-color);
+ border: 1px solid var(--border-color);
+ border-radius: 10px;
+ padding: 1.5rem;
+ margin-bottom: 2rem;
+ text-align: left;
+}
+.details-box h4 {
+ font-weight: 600;
+ margin-top: 0;
+ margin-bottom: 1rem;
+ color: var(--text-dark);
+}
+.details-grid {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ gap: 1rem 1.5rem;
+}
+.details-grid p {
+ margin: 0;
+ color: var(--text-light);
+}
+.details-grid strong {
+    color: var(--text-dark);
+}
+
+/* NEW: Styles for Module/Topic Tags */
+.details-tags {
+    grid-column: 1 / -1; /* Span full width */
+}
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.tag {
+    background-color: var(--border-color);
+    color: var(--text-light);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+
+.level-badge {
+ padding: 4px 10px;
+ border-radius: 12px;
+ font-size: 0.8rem;
+ font-weight: 600;
+ text-transform: capitalize;
+}
+.level-badge.level-easy { background-color: #d1e7dd; color: #0f5132; }
+.level-badge.level-medium { background-color: #fff3cd; color: #664d03; }
+.level-badge.level-hard { background-color: #f8d7da; color: #842029; }
+body.dark-theme .level-badge.level-easy { background-color: #0f5132; color: #d1e7dd; }
+body.dark-theme .level-badge.level-medium { background-color: #664d03; color: #fff3cd; }
+body.dark-theme .level-badge.level-hard { background-color: #842029; color: #f8d7da; }
+
+
+/* --- Rules List --- */
+.rules-list {
+ text-align: left;
+ margin-bottom: 2rem;
+}
+.rules-list h4 {
+ font-weight: 600;
+ margin-top: 0;
+ margin-bottom: 1rem;
+ color: var(--text-dark);
+}
+.rules-list ul {
+ list-style: none;
+ padding: 0;
+ margin: 0;
+}
+.rules-list li {
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ margin-bottom: 1rem;
+ font-size: 1rem;
+ color: var(--text-dark);
+}
+.rules-list svg {
+ width: 24px;
+ height: 24px;
+ flex-shrink: 0;
+ color: var(--primary-color); /* Changed from success-color */
+}
+
+/* --- Call to Action Section --- */
+.cta-section p {
+ font-weight: 500;
+ color: var(--text-light);
+ margin-bottom: 1rem;
+}
+.btn-start-interview {
+ width: 100%;
+ max-width: 300px;
+ padding: 14px;
+ background: var(--primary-color); /* Changed from success-color */
+ color: white;
+ border: none;
+ border-radius: 8px;
+ font-size: 1.1rem;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.3s ease;
+}
+.btn-start-interview:hover {
+ background-color: var(--primary-dark);
+ transform: translateY(-3px);
+ box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+/* --- Animations --- */
+@keyframes fadeInUp {
+ from { opacity: 0; transform: translateY(20px); }
+ to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 576px) {
+ .rules-card { padding: 2rem 1.5rem; }
+ .details-grid { grid-template-columns: 1fr; }
+}
+

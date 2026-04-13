@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ===== DEEP OCEAN DARK THEME ===== */
+.dark-theme {
+  --bg-primary: #0a0f1a;
+  --bg-surface: #121a2e;
+  --bg-surface-hover: #1a2540;
+  --bg-elevated: #1e2d4a;
+  --border-color: #1e2d4a;
+  --border-light: #253552;
+
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-light: rgba(59, 130, 246, 0.12);
+
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.12);
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.12);
+  --danger: #ef4444;
+  --danger-light: rgba(239, 68, 68, 0.12);
+  --accent: #8b5cf6;
+  --accent-light: rgba(139, 92, 246, 0.12);
+
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #0a0f1a;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --nav-bg: #0e1525;
+  --nav-border: #1e2d4a;
+
+  /* Legacy variable compat */
+  --background-color: var(--bg-primary);
+  --surface-color: var(--bg-surface);
+  --surface-hover: var(--bg-surface-hover);
+  --primary-blue: var(--primary);
+  --primary-hover-legacy: var(--primary-hover);
+  --text-main: var(--text-primary);
+  --text-dark: var(--text-primary);
+  --text-light: var(--text-secondary);
+  --success-green: var(--success);
+  --danger-red: var(--danger);
+  --primary-color: var(--primary);
+  --card-shadow: var(--shadow-sm);
+
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* ===== OCEAN DAY LIGHT THEME ===== */
+.light-theme {
+  --bg-primary: #f0f4ff;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #e8eefb;
+  --bg-elevated: #dce4f5;
+  --border-color: #c7d7f5;
+  --border-light: #b0c4e8;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: rgba(37, 99, 235, 0.07);
+
+  --success: #059669;
+  --success-light: rgba(5, 150, 105, 0.07);
+  --warning: #d97706;
+  --warning-light: rgba(217, 119, 6, 0.07);
+  --danger: #dc2626;
+  --danger-light: rgba(220, 38, 38, 0.07);
+  --accent: #7c3aed;
+  --accent-light: rgba(124, 58, 237, 0.07);
+
+  --text-primary: #0a1628;
+  --text-secondary: #4a6fa5;
+  --text-muted: #7a9bc7;
+  --text-inverse: #ffffff;
+
+  --shadow-sm: 0 1px 4px rgba(10, 22, 40, 0.06);
+  --shadow-md: 0 4px 12px rgba(10, 22, 40, 0.08);
+  --shadow-lg: 0 8px 24px rgba(10, 22, 40, 0.1);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --nav-bg: #ffffff;
+  --nav-border: #c7d7f5;
+
+  /* Legacy variable compat */
+  --background-color: var(--bg-primary);
+  --surface-color: var(--bg-surface);
+  --surface-hover: var(--bg-surface-hover);
+  --primary-blue: var(--primary);
+  --primary-hover-legacy: var(--primary-hover);
+  --text-main: var(--text-primary);
+  --text-dark: var(--text-primary);
+  --text-light: var(--text-secondary);
+  --success-green: var(--success);
+  --danger-red: var(--danger);
+  --primary-color: var(--primary);
+  --card-shadow: var(--shadow-sm);
+
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* ===== BASE STYLES ===== */
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Base card */
+.v2-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Smooth theme transitions — applies to all elements */
+.dark-theme, .light-theme {
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.dark-theme *, .light-theme * {
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+/* Exclude elements where theme transition causes glitches */
+.dark-theme input, .light-theme input,
+.dark-theme select, .light-theme select,
+.dark-theme video, .light-theme video,
+.dark-theme canvas, .light-theme canvas {
+  transition: none;
+}
+
+/* Accordion uses its own JS-driven height transition — don't override */
+.accordion-body {
+  transition: height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease !important;
+}

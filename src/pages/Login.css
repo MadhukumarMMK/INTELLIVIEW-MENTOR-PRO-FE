@@ -1,0 +1,114 @@
+.onboarding-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  gap: 2rem;
+}
+
+.onboarding-panel {
+  width: 100%;
+  max-width: 480px;
+  min-height: 550px;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-text { color: var(--primary-blue); font-weight: 600; margin-bottom: 1.5rem; }
+.panel-title { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.5rem; }
+.panel-subtitle { color: var(--text-muted); margin-bottom: 2rem; }
+
+/* Form Elements */
+.input-group { margin-bottom: 1.5rem; }
+.input-group label { display: block; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
+.v2-input {
+  width: 100%; padding: 12px 16px; background: transparent;
+  border: 1px solid var(--border-color); border-radius: var(--radius-md);
+  color: white; font-size: 1rem; transition: border 0.3s ease;
+}
+.v2-input:focus { outline: none; border-color: var(--primary-blue); }
+
+/* Buttons */
+.btn-primary {
+  width: 100%; padding: 14px; background: var(--primary-blue); color: white;
+  border: none; border-radius: var(--radius-md); font-weight: 600; font-size: 1rem;
+  cursor: pointer; transition: background 0.3s;
+}
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.divider {
+  display: flex; align-items: center; text-align: center; color: var(--text-muted); margin: 1.5rem 0;
+}
+.divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border-color); }
+.divider:not(:empty)::before { margin-right: .25em; }
+.divider:not(:empty)::after { margin-left: .25em; }
+
+.btn-google {
+  width: 100%; padding: 14px; background: transparent; color: white;
+  border: 1px solid var(--border-color); border-radius: var(--radius-md);
+  font-weight: 500; cursor: pointer; transition: background 0.3s;
+}
+.btn-google:hover { background: var(--surface-hover); }
+
+/* Upload Zone */
+.upload-zone {
+  border: 2px dashed var(--primary-blue); background: rgba(25, 103, 210, 0.05);
+  border-radius: var(--radius-lg); padding: 3rem 2rem; text-align: center;
+  cursor: pointer; transition: background 0.3s; margin-bottom: 1.5rem;
+}
+.upload-zone:hover { background: rgba(25, 103, 210, 0.1); }
+.upload-icon { font-size: 2rem; margin-bottom: 1rem; color: var(--primary-blue); }
+.upload-text-main { color: var(--primary-blue); font-weight: 600; margin-bottom: 0.5rem; display: block; }
+.upload-text-sub { color: var(--text-muted); font-size: 0.9rem; }
+
+/* Extracted Data Display */
+.extracted-data-box { margin-bottom: 1.5rem; }
+.extracted-data-box p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+.skills-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem; }
+.skill-chip {
+  background: var(--surface-hover); border: 1px solid var(--border-color);
+  padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
+}
+
+/* --- NEW: MOBILE RESPONSIVE TWEAKS --- */
+@media (max-width: 768px) {
+  .onboarding-wrapper {
+    padding: 1rem;
+    align-items: flex-start; /* Pushes the card up slightly on mobile so the keyboard doesn't hide inputs */
+  }
+
+  .onboarding-panel {
+    min-height: auto;
+    padding: 2rem 1.5rem !important; /* Reduce inner padding on mobile */
+  }
+
+  .panel-title {
+    font-size: 1.5rem !important; /* Slightly smaller header */
+  }
+
+  .panel-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .v2-input {
+    padding: 10px 14px; /* Tighter inputs to save vertical space */
+  }
+
+  .upload-zone {
+    padding: 2rem 1rem; /* Smaller drop zone on phones */
+  }
+
+  .skills-container {
+    justify-content: center; /* Center the skill chips on small screens */
+  }
+}
+
+/* Extra small screens (like older iPhones) */
+@media (max-width: 400px) {
+  .onboarding-panel {
+    padding: 1.5rem 1rem !important;
+  }
+}

@@ -1,0 +1,80 @@
+import React, { createContext, useContext, useState, useCallback } from "react";
+import "./Notification.css";
+
+const NotificationContext = createContext();
+
+export function useNotification() {
+  return useContext(NotificationContext);
+}
+
+export function NotificationProvider({ children }) {
+  const [toasts, setToasts] = useState([]);
+  const [confirmModal, setConfirmModal] = useState(null);
+
+  // --- Toast notifications ---
+  const addToast = useCallback((message, type = "info", duration = 4000) => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, message, type }]);
+    if (duration > 0) {
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, duration);
+    }
+  }, []);
+
+  const success = useCallback((msg) => addToast(msg, "success"), [addToast]);
+  const error = useCallback((msg) => addToast(msg, "error", 5000), [addToast]);
+  const warning = useCallback((msg) => addToast(msg, "warning", 5000), [addToast]);
+  const info = useCallback((msg) => addToast(msg, "info"), [addToast]);
+
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // --- Confirm modal ---
+  const confirm = useCallback((message, title = "Confirm") => {
+    return new Promise((resolve) => {
+      setConfirmModal({ title, message, resolve });
+    });
+  }, []);
+
+  const handleConfirm = (result) => {
+    if (confirmModal?.resolve) confirmModal.resolve(result);
+    setConfirmModal(null);
+  };
+
+  const notify = { success, error, warning, info, confirm };
+
+  const icons = { success: "✓", error: "✕", warning: "!", info: "i" };
+
+  return (
+    <NotificationContext.Provider value={notify}>
+      {children}
+
+      {/* Toast container */}
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <div key={toast.id} className={`toast toast-${toast.type}`} onClick={() => removeToast(toast.id)}>
+            <span className="toast-icon">{icons[toast.type]}</span>
+            <span className="toast-msg">{toast.message}</span>
+            <button className="toast-close" onClick={(e) => { e.stopPropagation(); removeToast(toast.id); }}>✕</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Confirm modal */}
+      {confirmModal && (
+        <div className="confirm-overlay" onClick={() => handleConfirm(false)}>
+          <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="confirm-title">{confirmModal.title}</h3>
+            <p className="confirm-message">{confirmModal.message}</p>
+            <div className="confirm-actions">
+              <button className="confirm-btn cancel" onClick={() => handleConfirm(false)}>Cancel</button>
+              <button className="confirm-btn ok" onClick={() => handleConfirm(true)}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </NotificationContext.Provider>
+  );
+}
