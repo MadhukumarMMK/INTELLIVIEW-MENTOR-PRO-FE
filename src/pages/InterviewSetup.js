@@ -24,11 +24,11 @@ export default function InterviewSetup() {
   const [selectedModule, setSelectedModule] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
   const [difficulty, setDifficulty] = useState("Medium");
-  const [aiPacing, setAiPacing] = useState("Adaptive");
+  const [aiPacing] = useState("Adaptive"); // eslint-disable-line no-unused-vars
 
   // --- Hardware State (Goal #16) ---
   const videoRef = useRef(null);
-  const [stream, setStream] = useState(null);
+  const [stream, setStream] = useState(null); // eslint-disable-line no-unused-vars
   const [camStatus, setCamStatus] = useState("Checking...");
   const [micStatus, setMicStatus] = useState("Checking...");
   const [audioLevel, setAudioLevel] = useState(0);
