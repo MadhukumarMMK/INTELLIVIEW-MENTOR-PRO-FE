@@ -15,6 +15,7 @@ export default function Interview() {
     const socketRef = useRef(null);
     const detectionIntervalRef = useRef(null);
     const mediaRecorderRef = useRef(null);
+    const streamRef = useRef(null); // Store stream directly for reliable cleanup
 
     const notify = useNotification();
     const { baseMode, difficulty, technology, module, topic, interviewId } = location.state || {};
@@ -141,6 +142,9 @@ export default function Interview() {
                     ? Math.round(answered.reduce((sum, r) => sum + r.accuracy, 0) / answered.length)
                     : 0;
 
+                // Stop all media before saving results
+                killAllMedia();
+
                 // Save full results to DB
                 axios.put(`/interviews/update/${interviewId}`, {
                     status: 2,
@@ -230,6 +234,7 @@ export default function Interview() {
         const setupHardware = async () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                streamRef.current = stream; // Save for reliable cleanup
                 if (videoRef.current) videoRef.current.srcObject = stream;
 
                 // Setup MediaRecorder with audio-only stream for Librosa/CNN-LSTM
@@ -266,14 +271,7 @@ export default function Interview() {
 
         return () => {
             clearInterval(timer);
-            window.speechSynthesis.cancel();
-            try { recognitionRef.current?.stop(); } catch (_) {}
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-                try { mediaRecorderRef.current.stop(); } catch (_) {}
-            }
-            if (videoRef.current && videoRef.current.srcObject) {
-                videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-            }
+            killAllMedia();
         };
     }, [showInstructions]);
 
@@ -307,10 +305,8 @@ export default function Interview() {
 
                 if (count >= 2) {
                     // AUTO-END: Delete interview and redirect
+                    killAllMedia();
                     try { axios.delete(`/interviews/delete/${interviewId}`); } catch (_) {}
-                    if (videoRef.current?.srcObject) {
-                        videoRef.current.srcObject.getTracks().forEach(t => t.stop());
-                    }
                     notify.error("Interview terminated. You switched tabs multiple times.");
                     setTimeout(() => navigate("/dashboard"), 1500);
                 }
@@ -434,6 +430,24 @@ export default function Interview() {
             setTimeout(() => speak(textToSpeak), 300);
         }
     }, [questions, currentIdx, loading, speak, showInstructions]);
+
+    // --- Kill all media — guaranteed camera/mic release ---
+    const killAllMedia = useCallback(() => {
+        clearInterval(detectionIntervalRef.current);
+        window.speechSynthesis.cancel();
+        try { recognitionRef.current?.stop(); } catch (_) {}
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+            try { mediaRecorderRef.current.stop(); } catch (_) {}
+        }
+        // Stop stream directly — works even if videoRef is unmounted
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+    }, []);
 
     // --- 8. Start/Stop Recording (mic + audio) ---
     const startRecording = () => {
@@ -821,11 +835,8 @@ export default function Interview() {
                         "End Interview"
                     );
                     if (!ok) return;
-                    // Stop all media
-                    stopRecording();
-                    window.speechSynthesis.cancel();
-                    clearInterval(detectionIntervalRef.current);
-                    // Delete the in-progress interview to free the slot
+                    killAllMedia();
+                    // Delete the in-progress interview
                     try {
                         await axios.delete(`/interviews/delete/${interviewId}`);
                     } catch (_) {}
