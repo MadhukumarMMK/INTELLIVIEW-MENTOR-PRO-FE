@@ -391,43 +391,64 @@ export default function Interview() {
     // --- 7. TTS — Read question aloud, then enable Record button ---
     const speak = useCallback((text) => {
         if (!text) return;
+
+        // Cancel any ongoing speech
         window.speechSynthesis.cancel();
 
-        // Wait a tick for cancel to complete
+        setIsSpeaking(true);
+        setCanRecord(false);
+
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.rate = 0.9;
+        msg.lang = 'en-US';
+
+        // Try to pick a good English voice
+        const voices = window.speechSynthesis.getVoices();
+        const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
+            || voices.find(v => v.lang.startsWith('en'))
+            || null;
+        if (englishVoice) msg.voice = englishVoice;
+
+        msg.onend = () => {
+            setIsSpeaking(false);
+            setCanRecord(true);
+        };
+        msg.onerror = () => {
+            setIsSpeaking(false);
+            setCanRecord(true);
+        };
+
+        // Unstick paused state
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
+
+        window.speechSynthesis.speak(msg);
+
+        // Fallback: if nothing happens after 1 second, enable record anyway
         setTimeout(() => {
-            setIsSpeaking(true);
-            setCanRecord(false);
-
-            const msg = new SpeechSynthesisUtterance(text);
-            msg.rate = 0.9;
-            msg.lang = 'en-US';
-
-            msg.onend = () => {
+            if (!window.speechSynthesis.speaking) {
                 setIsSpeaking(false);
                 setCanRecord(true);
-            };
-            msg.onerror = () => {
-                setIsSpeaking(false);
-                setCanRecord(true);
-            };
-
-            // Ensure synthesis is not stuck in paused state
-            if (window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
             }
+        }, 1000);
+    }, []);
 
-            window.speechSynthesis.speak(msg);
-        }, 50);
+    // Preload voices (Chrome loads them async)
+    useEffect(() => {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.getVoices();
+        };
     }, []);
 
     useEffect(() => {
-        if (showInstructions) return; // Don't speak during instructions
+        if (showInstructions) return;
         if (questions[currentIdx] && !loading) {
             const textToSpeak = typeof questions[currentIdx] === 'object'
                 ? questions[currentIdx].question
                 : questions[currentIdx];
-            // Small delay to ensure browser allows TTS after user interaction
-            setTimeout(() => speak(textToSpeak), 300);
+            speak(textToSpeak);
         }
     }, [questions, currentIdx, loading, speak, showInstructions]);
 
@@ -619,9 +640,10 @@ export default function Interview() {
                             <span className="countdown-num">{countdown}</span>
                         </div>
                         <button className="instructions-skip" onClick={() => {
-                            // Unlock browser TTS with a silent utterance on user click
-                            const unlock = new SpeechSynthesisUtterance('');
-                            unlock.volume = 0;
+                            // Unlock browser TTS with a tiny utterance on user click
+                            window.speechSynthesis.cancel();
+                            const unlock = new SpeechSynthesisUtterance('.');
+                            unlock.volume = 0.01;
                             window.speechSynthesis.speak(unlock);
                             setShowInstructions(false);
                         }}>
