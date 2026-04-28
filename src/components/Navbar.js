@@ -20,24 +20,40 @@ export default function Navbar() {
     navigate("/login");
   };
 
-  const hiddenPaths = ["/login", "/interview"];
-  const shouldHideNavbar = hiddenPaths.some(path => location.pathname.includes(path));
+  // Hide navbar on login + active interview screens (but NOT on /interviews list or /interview-setup)
+  const hiddenExact = ["/login"];
+  const hiddenPrefixes = ["/interview/", "/interview-setup", "/profile/share/"];
+  const p = location.pathname;
+  const shouldHideNavbar =
+    hiddenExact.includes(p) ||
+    hiddenPrefixes.some(prefix => p.startsWith(prefix));
   if (shouldHideNavbar) return null;
+
+  const isAdmin = user?.role === "admin";
+  const homePath = isAdmin ? "/admin" : "/dashboard";
+  const isActive = (path) => {
+    if (path === "/dashboard") return p === "/dashboard";
+    if (path === "/admin") return p === "/admin";
+    return p.startsWith(path);
+  };
+  const linkClass = (path) => `nav-link${isActive(path) ? " active" : ""}`;
 
   return (
     <nav className="v2-navbar">
       <div className="navbar-brand">
         <div className="brand-logo">IV</div>
-        <Link to="/dashboard" className="brand-name">IntelliView</Link>
+        <Link to={homePath} className="brand-name">IntelliView</Link>
       </div>
 
       <div className="navbar-menu">
         {user ? (
           <div className="user-menu">
-            {user.role !== "admin" && <Link to="/myreports" className="nav-link">My Reports</Link>}
-            {user.role !== "admin" && <Link to="/digilocker" className="nav-link">DigiLocker</Link>}
-            <Link to="/profile" className="nav-link">Profile</Link>
-            {user.role === "admin" && <Link to="/admin" className="nav-link">Dashboard</Link>}
+            {!isAdmin && <Link to="/dashboard" className={linkClass("/dashboard")}>Dashboard</Link>}
+            {!isAdmin && <Link to="/interviews" className={linkClass("/interviews")}>Interviews</Link>}
+            {!isAdmin && <Link to="/myreports" className={linkClass("/myreports")}>My Reports</Link>}
+            {!isAdmin && <Link to="/digilocker" className={linkClass("/digilocker")}>DigiLocker</Link>}
+            {isAdmin && <Link to="/admin" className={linkClass("/admin")}>Admin Panel</Link>}
+            <Link to="/profile" className={linkClass("/profile")}>Profile</Link>
 
             {/* Theme Toggle — Deep Ocean / Ocean Day */}
             <button className="theme-toggle" onClick={toggleTheme} title={isDarkMode ? "Ocean Day Mode" : "Deep Ocean Mode"}>

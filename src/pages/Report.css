@@ -4,8 +4,8 @@
   font-family: 'Poppins', sans-serif;
   background-color: var(--bg-primary);
   min-height: 100vh;
-  padding: 2rem;
-  max-width: 1200px;
+  padding: var(--content-padding);
+  max-width: var(--content-max-width);
   margin: 0 auto;
   color: var(--text-primary);
 }

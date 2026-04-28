@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useNotification } from "../context/NotificationContext";
 import IntelliLoader from "../components/IntelliLoader";
 import { SERVER_URL } from "../api/config";
+import { LayoutGrid, List, FileText, Image as ImageIcon, File, X as XIcon, Eye, Download, Trash2, FolderOpen } from "lucide-react";
 import "./DigiLocker.css";
 
 export default function DigiLocker() {
@@ -103,8 +104,20 @@ export default function DigiLocker() {
           <p className="digi-subtitle">{certs.length} certificate{certs.length !== 1 ? 's' : ''} stored securely</p>
         </div>
         <div className="digi-header-actions">
-          <button className={`view-toggle ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}>Grid</button>
-          <button className={`view-toggle ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>List</button>
+          <div className="view-toggle-group" role="group" aria-label="View mode">
+            <button
+              className={`view-toggle ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+              title="Grid view"
+            ><LayoutGrid size={16} strokeWidth={2} /></button>
+            <button
+              className={`view-toggle ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+              title="List view"
+            ><List size={16} strokeWidth={2} /></button>
+          </div>
           <button className="digi-back" onClick={() => navigate("/profile")}>Back to Profile</button>
         </div>
       </div>
@@ -129,7 +142,7 @@ export default function DigiLocker() {
         <div className={`digi-certs ${viewMode}`}>
           {certs.length === 0 ? (
             <div className="digi-empty">
-              <span className="digi-empty-icon" style={{ fontSize: '1.5rem', color: 'var(--text-muted)' }}>No files</span>
+              <FolderOpen size={42} strokeWidth={1.5} className="digi-empty-icon" />
               <h3>Your DigiLocker is empty</h3>
               <p>Upload your certificates, achievements, and credentials. Supported formats: PDF, JPG, PNG.</p>
             </div>
@@ -148,11 +161,15 @@ export default function DigiLocker() {
                   onClick={() => isObj && openPreview(cert)}
                 >
                   {/* Thumbnail */}
-                  <div className="cert-thumb">
+                  <div className={`cert-thumb ${isPdf ? 'thumb-pdf' : isImg ? 'thumb-img' : 'thumb-file'}`}>
                     {isObj && isImg && cert.url ? (
                       <img src={`${SERVER_URL}${cert.url}`} alt={name} className="cert-thumb-img" />
                     ) : (
-                      <span className="cert-thumb-icon">{isPdf ? 'PDF' : isImg ? 'IMG' : 'FILE'}</span>
+                      <span className="cert-thumb-icon">
+                        {isPdf ? <FileText size={28} strokeWidth={1.6} />
+                          : isImg ? <ImageIcon size={28} strokeWidth={1.6} />
+                            : <File size={28} strokeWidth={1.6} />}
+                      </span>
                     )}
                   </div>
 
@@ -167,9 +184,9 @@ export default function DigiLocker() {
                   {/* Actions */}
                   {isObj && (
                     <div className="cert-card-actions" onClick={e => e.stopPropagation()}>
-                      {cert.url && <button className="cert-action-btn view" onClick={() => openPreview(cert)}>View</button>}
-                      {cert.url && <button className="cert-action-btn download" onClick={() => downloadCert(cert)}>Download</button>}
-                      {cert.id && <button className="cert-action-btn del" onClick={() => handleDelete(cert.id)}>Delete</button>}
+                      {cert.url && <button className="cert-action-btn view" onClick={() => openPreview(cert)} title="View"><Eye size={14} strokeWidth={2} /></button>}
+                      {cert.url && <button className="cert-action-btn download" onClick={() => downloadCert(cert)} title="Download"><Download size={14} strokeWidth={2} /></button>}
+                      {cert.id && <button className="cert-action-btn del" onClick={() => handleDelete(cert.id)} title="Delete"><Trash2 size={14} strokeWidth={2} /></button>}
                     </div>
                   )}
                 </div>
@@ -183,7 +200,7 @@ export default function DigiLocker() {
           <div className="digi-preview">
             <div className="preview-header">
               <h3>{previewCert.name}</h3>
-              <button className="preview-close" onClick={() => setPreviewCert(null)}>✕</button>
+              <button className="preview-close" onClick={() => setPreviewCert(null)} aria-label="Close preview"><XIcon size={18} strokeWidth={2} /></button>
             </div>
             <div className="preview-body">
               {isImage(previewCert.name) ? (
@@ -196,7 +213,7 @@ export default function DigiLocker() {
                 />
               ) : (
                 <div className="preview-unsupported">
-                  <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>FILE</span>
+                  <File size={40} strokeWidth={1.5} />
                   <p>Preview not available for this file type.</p>
                 </div>
               )}

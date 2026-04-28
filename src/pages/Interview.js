@@ -18,7 +18,7 @@ export default function Interview() {
     const streamRef = useRef(null); // Store stream directly for reliable cleanup
 
     const notify = useNotification();
-    const { baseMode, difficulty, technology, module, topic, interviewId } = location.state || {};
+    const { baseMode, difficulty, technology, technologyName, module, moduleName, topic, topicName, interviewId } = location.state || {};
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     // --- Instructions Screen ---
@@ -49,6 +49,7 @@ export default function Interview() {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState("");
     const transcriptRef = useRef("");
+    const accumulatedFinalRef = useRef(""); // Survives browser auto-stop/restart on pauses
     const [currentDifficulty, setCurrentDifficulty] = useState(difficulty || "Medium");
     const [isEvaluating, setIsEvaluating] = useState(false);
     const [faceConfidence, setFaceConfidence] = useState(100);
@@ -165,7 +166,11 @@ export default function Interview() {
                 setCurrentDifficulty(data.new_difficulty);
                 setCurrentIdx(prev => prev + 1);
                 setQuestionsAsked(prev => prev + 1);
+                // Next question begins — reset all transcript buffers so the
+                // new answer starts clean. (Stop/Start recording mid-question
+                // no longer clears — see startRecording below.)
                 transcriptRef.current = "";
+                accumulatedFinalRef.current = "";
                 setTranscript("");
                 setIsEvaluating(false);
                 setIsListening(false);
@@ -280,6 +285,9 @@ export default function Interview() {
     const tabSwitchCountRef = useRef(0);
     const [tabWarning, setTabWarning] = useState(false);
     const wasSpeakingRef = useRef(false);
+    // Mirror currentQuestionText so the visibility handler always reads the
+    // LATEST question, not a stale closure capture from effect mount time.
+    const currentQuestionRef = useRef("");
 
     useEffect(() => {
         const handleVisibility = () => {
@@ -294,7 +302,8 @@ export default function Interview() {
                 clearInterval(detectionIntervalRef.current);
                 window.speechSynthesis.cancel();
                 if (isListening) {
-                    try { recognitionRef.current?.stop(); } catch (_) {}
+                    if (recognitionRef.current) recognitionRef.current._shouldRun = false;
+        try { recognitionRef.current?.stop(); } catch (_) {}
                     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
                         try { mediaRecorderRef.current.stop(); } catch (_) {}
                     }
@@ -323,9 +332,13 @@ export default function Interview() {
                     notify.warning("Warning: Tab switch detected! One more switch will end your interview.");
                     setTimeout(() => setTabWarning(false), 5000);
 
-                    // Resume TTS if it was speaking before tab switch
-                    if (wasSpeakingRef.current && currentQuestionText) {
-                        setTimeout(() => speak(currentQuestionText), 500);
+                    // Always re-read the CURRENT question (via ref) so we don't
+                    // fall back to the first-question closure after a tab switch.
+                    const resumeText = currentQuestionRef.current;
+                    if (resumeText) {
+                        // Re-speak the current question so the user knows where
+                        // they paused, regardless of whether TTS was mid-sentence.
+                        setTimeout(() => speak(resumeText), 500);
                     }
                 }
             }
@@ -345,23 +358,39 @@ export default function Interview() {
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = true;
         recognitionRef.current.interimResults = true;
+        recognitionRef.current.maxAlternatives = 1;
+        recognitionRef.current.lang = 'en-US';
         recognitionRef.current.onresult = (e) => {
-            let finalText = "";
-            let interimText = "";
-            for (let i = 0; i < e.results.length; i++) {
+            // Only process NEW results from this event (not re-scan all history)
+            let newFinal = "";
+            let interim = "";
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                const chunk = e.results[i][0].transcript;
                 if (e.results[i].isFinal) {
-                    finalText += e.results[i][0].transcript;
+                    newFinal += chunk + " ";
                 } else {
-                    interimText += e.results[i][0].transcript;
+                    interim += chunk;
                 }
             }
-            const fullText = finalText + interimText;
+            // Persistently accumulate finalized text across browser restart cycles
+            if (newFinal) {
+                accumulatedFinalRef.current += newFinal;
+            }
+            const fullText = (accumulatedFinalRef.current + interim).replace(/\s+/g, ' ').trim();
             transcriptRef.current = fullText;
             setTranscript(fullText);
         };
+        // Auto-restart on unexpected browser stops — keeps the stream live
         recognitionRef.current.onend = () => {
-            // If still in listening mode, auto-restart (browser can stop unexpectedly)
-            // But don't restart if we intentionally stopped
+            if (recognitionRef.current && recognitionRef.current._shouldRun) {
+                try { recognitionRef.current.start(); } catch (_) {}
+            }
+        };
+        // Swallow benign errors (no-speech / network) — onend will still auto-restart
+        recognitionRef.current.onerror = (e) => {
+            if (e.error && e.error !== 'aborted' && e.error !== 'no-speech') {
+                console.log('Speech recognition error:', e.error);
+            }
         };
     };
 
@@ -370,9 +399,9 @@ export default function Interview() {
         try {
             const res = await axios.post("/interviews/generate-questions", {
                 mode: baseMode,
-                tech: baseMode === "hr" ? "Behavioral" : technology,
-                module: baseMode === "hr" ? "Situational" : module,
-                topic: baseMode === "hr" ? "Soft Skills" : topic,
+                tech: baseMode === "hr" ? "Behavioral" : (technologyName || "General"),
+                module: baseMode === "hr" ? "Situational" : (moduleName || "General"),
+                topic: baseMode === "hr" ? "Soft Skills" : (topicName || "General"),
                 difficulty: currentDifficulty,
                 skills: baseMode === "resume" ? (user.skills || []) : []
             });
@@ -456,9 +485,14 @@ export default function Interview() {
     const killAllMedia = useCallback(() => {
         clearInterval(detectionIntervalRef.current);
         window.speechSynthesis.cancel();
+        if (recognitionRef.current) recognitionRef.current._shouldRun = false;
         try { recognitionRef.current?.stop(); } catch (_) {}
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
             try { mediaRecorderRef.current.stop(); } catch (_) {}
+        }
+        // Exit fullscreen if we're still in it — interview ended cleanly
+        if (document.fullscreenElement) {
+            try { document.exitFullscreen?.()?.catch?.(() => {}); } catch (_) {}
         }
         // Stop stream directly — works even if videoRef is unmounted
         if (streamRef.current) {
@@ -472,12 +506,17 @@ export default function Interview() {
 
     // --- 8. Start/Stop Recording (mic + audio) ---
     const startRecording = () => {
-        transcriptRef.current = "";
-        setTranscript("");
+        // DO NOT clear transcriptRef / accumulatedFinalRef here — Stop + Start
+        // during one answer is a pause, not a restart. The buffer is cleared
+        // when a NEW question arrives (see next_step_ready handler above).
 
-        // Start speech recognition
+        // Stop any previous session cleanly, then mark "should auto-restart"
+        // before calling start(). Order matters: set flag AFTER stop() otherwise
+        // the onend handler fires and sees shouldRun=true and races start().
+        if (recognitionRef.current) recognitionRef.current._shouldRun = false;
         try { recognitionRef.current?.stop(); } catch (_) {}
         setTimeout(() => {
+            if (recognitionRef.current) recognitionRef.current._shouldRun = true;
             try { recognitionRef.current?.start(); } catch (_) {}
         }, 100);
 
@@ -492,6 +531,8 @@ export default function Interview() {
     };
 
     const stopRecording = () => {
+        // Tell onend handler NOT to auto-restart this time
+        if (recognitionRef.current) recognitionRef.current._shouldRun = false;
         try { recognitionRef.current?.stop(); } catch (_) {}
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
             try { mediaRecorderRef.current.stop(); } catch (_) {}
@@ -516,7 +557,9 @@ export default function Interview() {
             history: questions.map(q => typeof q === 'object' ? q.question : q),
             roll_no: user.roll_no,
             difficulty: currentDifficulty,
-            tech: technology,
+            tech: technologyName || "General",
+            module: moduleName || "",
+            topic: topicName || "",
             mode: baseMode,
             skills: baseMode === "resume" ? (user.skills || []) : []
         };
@@ -529,6 +572,7 @@ export default function Interview() {
     const handleSubmit = () => {
         if (isEvaluating || loading) return;
         setIsEvaluating(true);
+        if (recognitionRef.current) recognitionRef.current._shouldRun = false;
         try { recognitionRef.current?.stop(); } catch (_) {}
 
         // Stop MediaRecorder — wait for final ondataavailable before emitting
@@ -561,6 +605,10 @@ export default function Interview() {
     const currentQuestionText = questions[currentIdx]
         ? (typeof questions[currentIdx] === 'object' ? questions[currentIdx].question : questions[currentIdx])
         : "";
+
+    // Keep the ref in sync on every render — the tab-visibility handler reads
+    // this to replay the CURRENT question (not a stale closure capture).
+    currentQuestionRef.current = currentQuestionText;
 
     // --- Instructions content by mode ---
     const instructionsData = {
@@ -645,6 +693,19 @@ export default function Interview() {
                             const unlock = new SpeechSynthesisUtterance('.');
                             unlock.volume = 0.01;
                             window.speechSynthesis.speak(unlock);
+                            // Request fullscreen on the user gesture — browsers
+                            // require an explicit click to allow fullscreen.
+                            // If user later presses Esc to exit, that's fine —
+                            // we don't penalize. Tab switches remain a violation
+                            // and are handled separately by visibilitychange.
+                            const root = document.documentElement;
+                            const req = root.requestFullscreen
+                                || root.webkitRequestFullscreen
+                                || root.mozRequestFullScreen
+                                || root.msRequestFullscreen;
+                            if (req) {
+                                try { req.call(root)?.catch?.(() => {}); } catch (_) {}
+                            }
                             setShowInstructions(false);
                         }}>
                             {countdown > 0 ? `Skip (${countdown}s)` : "Start Interview"}

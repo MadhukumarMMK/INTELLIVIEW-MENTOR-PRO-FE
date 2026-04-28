@@ -1,6 +1,6 @@
 .dashboard-wrapper {
-  padding: 2rem;
-  max-width: 1200px;
+  padding: var(--content-padding);
+  max-width: var(--content-max-width);
   margin: 0 auto;
 }
 
@@ -113,16 +113,19 @@
 }
 
 .action-icon {
-  width: 48px;
-  height: 48px;
-  background: var(--surface-hover);
+  width: 52px;
+  height: 52px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
-  font-size: 1.5rem;
 }
+.action-icon-blue   { background: var(--primary-light); color: var(--primary); }
+.action-icon-green  { background: var(--success-light); color: var(--success); }
+.action-icon-purple { background: var(--accent-light); color: var(--accent); }
 
 .action-card h3 {
   font-size: 1.1rem;
@@ -196,7 +199,234 @@
   color: var(--text-muted);
 }
 
-/* --- Mobile Responsiveness --- */
+/* ===== Analytics Widgets (theme-aware, matches .stat-card / .action-card) ===== */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.analytics-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.4rem 1.5rem;
+  box-shadow: var(--card-shadow, 0 2px 12px rgba(0, 0, 0, 0.04));
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  /* Flex column so body stretches and cards align equally in the grid row */
+  display: flex;
+  flex-direction: column;
+}
+
+.analytics-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: 0 6px 24px var(--primary-light);
+}
+
+.analytics-card.span-2 { grid-column: span 2; }
+
+/* Header row — fixed layout so icon + title align identically across all cards */
+.analytics-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 1.1rem;
+  min-height: 48px;
+}
+
+.analytics-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.analytics-head > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.icon-strongest { background: var(--icon-bg-primary); color: var(--primary); }
+.icon-favorite  { background: var(--icon-bg-success); color: var(--success); }
+.icon-chart     { background: var(--icon-bg-accent);  color: var(--accent); }
+.icon-doughnut  { background: var(--icon-bg-warning); color: var(--warning); }
+
+.analytics-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.analytics-head p {
+  margin: 3px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Strongest Skills — single shared grid so ALL rows align on the same columns */
+.analytics-skill-bars {
+  display: grid;
+  grid-template-columns: 160px 1fr 64px;
+  column-gap: 18px;
+  row-gap: 18px;
+  align-content: center;
+  align-items: center;
+  flex: 1;
+}
+
+/* Each row flows its cells into the parent grid (display: contents) */
+.analytics-skill-row {
+  display: contents;
+}
+
+.analytics-skill-row .analytics-skill-label {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-skill-track {
+  position: relative;
+  height: 10px;
+  background: var(--bg-elevated);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.analytics-skill-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 5px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.analytics-skill-row .analytics-skill-pct {
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Empty-state message spans the full grid width */
+.analytics-skill-empty {
+  grid-column: 1 / -1;
+  align-self: center;
+  text-align: center;
+  margin: 0;
+  padding: 1rem 0;
+}
+
+/* Favorite Skills — vertical flex so nudge anchors at card bottom */
+.favorite-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.favorite-body p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.favorite-body .favorite-lead {
+  font-size: 0.98rem;
+  font-weight: 500;
+}
+.favorite-body .favorite-sub {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: -2px;
+}
+.favorite-body .favorite-count {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+.favorite-body .accent-name {
+  color: var(--primary);
+  font-weight: 600;
+}
+.favorite-body ul {
+  margin: 4px 0;
+  padding-left: 18px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  list-style-type: disc;
+}
+.favorite-body ul li {
+  margin-bottom: 4px;
+  line-height: 1.45;
+}
+.favorite-nudge {
+  margin-top: auto; /* anchors the tip to card bottom */
+  padding: 10px 12px;
+  background: var(--primary-light);
+  border-left: 3px solid var(--primary);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+/* Chart areas — flex-fill body so chart cards align with skill/favorite cards */
+.chart-area {
+  height: 240px;
+  position: relative;
+  flex: 1;
+  min-height: 200px;
+}
+.chart-area-small {
+  height: 200px;
+  flex: 1;
+  min-height: 180px;
+}
+
+/* Loading state — prevents the empty-state flash during initial fetch */
+.dashboard-loading {
+  margin-top: 2rem;
+  padding: 3rem 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 280px;
+}
+
+/* Empty state */
+.empty-analytics {
+  margin-top: 2rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-color);
+  border-radius: 14px;
+}
+.empty-analytics h3 { margin: 0 0 8px; color: var(--text-primary); }
+.empty-analytics p { margin: 0 0 20px; color: var(--text-secondary); }
+
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+
+/* ===== Mobile Responsiveness ===== */
+@media (max-width: 960px) {
+  .analytics-grid { grid-template-columns: repeat(2, 1fr); }
+  .analytics-card.span-2 { grid-column: span 2; }
+}
+
 @media (max-width: 768px) {
   .dashboard-header-row {
     flex-direction: column;
@@ -204,4 +434,7 @@
     gap: 1.5rem;
   }
   .limits-container { width: 100%; }
+  .analytics-grid { grid-template-columns: 1fr; }
+  .analytics-card.span-2 { grid-column: span 1; }
+  .analytics-skill-row { grid-template-columns: 100px 1fr 50px; gap: 10px; }
 }

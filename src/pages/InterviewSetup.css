@@ -3,8 +3,8 @@
   background-color: var(--bg-color);
   color: var(--text-main);
   min-height: 100vh;
-  padding: 2rem;
-  max-width: 1400px;
+  padding: var(--content-padding);
+  max-width: var(--content-max-width);
   margin: 0 auto;
   animation: fadeIn 0.4s ease-in-out;
   transition: background-color 0.3s, color 0.3s;

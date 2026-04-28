@@ -6,20 +6,187 @@
   font-family: 'Poppins', sans-serif;
   background-color: var(--background-color);
   min-height: calc(100vh - var(--nav-height));
-  padding: 2rem;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--content-padding);
 }
 
 .reports-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 2.5rem;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 .reports-header h1 {
   font-weight: 700;
   color: var(--text-dark);
+  margin: 0;
 }
 .reports-header p {
   color: var(--text-light);
   font-size: 1rem;
+  margin: 4px 0 0;
+}
+
+.reports-back-btn {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.reports-back-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Archive / Unarchive buttons replace the old delete button */
+.archive-btn,
+.unarchive-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.archive-btn:hover {
+  background: var(--warning-light);
+  color: var(--warning);
+  border-color: var(--warning);
+}
+.unarchive-btn:hover:not(.disabled):not(:disabled) {
+  background: var(--success-light);
+  color: var(--success);
+  border-color: var(--success);
+}
+.unarchive-btn.disabled,
+.unarchive-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Active / Archived primary tabs */
+.reports-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.reports-tab {
+  background: transparent;
+  border: none;
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -1px;
+}
+.reports-tab:hover { color: var(--primary); }
+.reports-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+.reports-tab .tab-count {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.reports-tab.active .tab-count {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+/* Mode sub-tabs for archived view */
+.archived-mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+.mode-tab {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+.mode-tab:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.mode-tab.active {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+.mode-tab-count {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+}
+.mode-tab.active .mode-tab-count {
+  background: var(--bg-surface);
+}
+
+/* Archived card subtle differentiation */
+.archived-card {
+  opacity: 0.92;
+}
+.archived-card:hover { opacity: 1; }
+.archived-date {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.btn-start-first {
+  margin-top: 16px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-start-first:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
 }
 
 /* --- Status & Loader (reusing from other components) --- */

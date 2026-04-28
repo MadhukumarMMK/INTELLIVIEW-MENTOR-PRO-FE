@@ -2,8 +2,8 @@
   font-family: 'Poppins', sans-serif;
   background: var(--bg-primary);
   min-height: calc(100vh - var(--nav-height, 60px));
-  padding: 2rem;
-  max-width: 1100px;
+  padding: var(--content-padding);
+  max-width: var(--content-max-width);
   margin: 0 auto;
 }
 
@@ -543,10 +543,140 @@
   font-size: 0.8rem;
 }
 
+/* ===== Resume Focus Mode (contextual banner + pulse + post-upload CTA) ===== */
+.focus-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  margin: 16px 0 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(14, 165, 233, 0.14));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+  animation: banner-slide-in 0.45s ease-out;
+}
+
+.focus-banner-icon {
+  font-size: 2.2rem;
+  flex-shrink: 0;
+}
+
+.focus-banner-content { flex: 1; }
+
+.focus-banner-content h3 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.focus-banner-content p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.focus-banner-btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1, #0ea5e9);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+
+.focus-banner-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
+}
+
+@keyframes banner-slide-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Pulse animation for the Upload Resume button when user was redirected */
+.btn-action-profile.pulse-attention {
+  position: relative;
+  animation: pulse-halo 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-halo {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.55),
+                0 0 0 0 rgba(14, 165, 233, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(99, 102, 241, 0),
+                0 0 0 20px rgba(14, 165, 233, 0);
+  }
+}
+
+/* Resume card meta + post-upload CTA */
+.resume-card .resume-meta {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.post-upload-cta {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  animation: banner-slide-in 0.4s ease-out;
+}
+
+.cta-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.cta-check-icon {
+  color: var(--success);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.cta-skills {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.cta-start-interview {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #10b981, #0ea5e9);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.cta-start-interview:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .profile-grid { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: 1fr; }
   .action-btns { flex-direction: column; }
   .social-links { justify-content: center; }
+  .focus-banner { flex-direction: column; align-items: stretch; text-align: center; }
+  .focus-banner-btn { width: 100%; }
 }

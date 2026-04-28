@@ -1,8 +1,8 @@
 .digi-wrapper {
   min-height: calc(100vh - 64px);
   background: var(--bg-primary);
-  padding: 2rem;
-  max-width: 1200px;
+  padding: var(--content-padding);
+  max-width: var(--content-max-width);
   margin: 0 auto;
   font-family: 'Inter', sans-serif;
 }
@@ -22,19 +22,34 @@
 
 .digi-header-actions { display: flex; gap: 6px; align-items: center; }
 
-.view-toggle {
-  padding: 6px 14px;
-  border: 1px solid var(--border-color);
+/* Segmented icon toggle for Grid / List view */
+.view-toggle-group {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 3px;
   background: var(--bg-surface);
-  color: var(--text-muted);
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.15s;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
 }
-.view-toggle.active { background: var(--primary); color: white; border-color: var(--primary); }
+.view-toggle {
+  width: 34px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.view-toggle:hover:not(.active) { color: var(--primary); background: var(--bg-surface-hover); }
+.view-toggle.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--primary-light);
+}
 
 .digi-back {
   padding: 6px 16px;
@@ -130,7 +145,7 @@
 .digi-certs.grid .cert-thumb-img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-sm); }
 .digi-certs.grid .cert-card-actions { width: 100%; justify-content: flex-start; margin-top: 4px; }
 
-/* Thumbnail */
+/* Thumbnail — color-coded per file type */
 .cert-thumb {
   width: 48px;
   height: 48px;
@@ -138,12 +153,16 @@
   align-items: center;
   justify-content: center;
   background: var(--primary-light);
+  color: var(--primary);
   border-radius: var(--radius-sm);
   flex-shrink: 0;
   overflow: hidden;
 }
+.cert-thumb.thumb-pdf  { background: var(--danger-light);  color: var(--danger); }
+.cert-thumb.thumb-img  { background: var(--success-light); color: var(--success); }
+.cert-thumb.thumb-file { background: var(--bg-elevated);   color: var(--text-secondary); }
 .cert-thumb-img { width: 100%; height: 100%; object-fit: cover; }
-.cert-thumb-icon { font-size: 1.5rem; }
+.cert-thumb-icon { display: inline-flex; align-items: center; justify-content: center; }
 
 .cert-card-info { flex: 1; min-width: 0; }
 .cert-card-name {
@@ -160,16 +179,20 @@
 .cert-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
 
 .cert-action-btn {
-  padding: 5px 12px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   border: none;
   border-radius: var(--radius-sm);
-  font-size: 0.73rem;
-  font-weight: 600;
-  cursor: pointer;
   font-family: inherit;
-  transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s;
 }
-.cert-action-btn:hover { opacity: 0.8; }
+.cert-action-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.cert-action-btn:active { transform: translateY(0); }
 .cert-action-btn.view { background: var(--primary-light); color: var(--primary); }
 .cert-action-btn.download { background: var(--success-light); color: var(--success); }
 .cert-action-btn.del { background: var(--danger-light); color: var(--danger); }
@@ -181,7 +204,7 @@
   color: var(--text-muted);
   grid-column: 1 / -1;
 }
-.digi-empty-icon { font-size: 3rem; display: block; margin-bottom: 1rem; }
+.digi-empty-icon { color: var(--text-muted); display: block; margin: 0 auto 1rem; }
 .digi-empty h3 { margin: 0 0 0.5rem; color: var(--text-primary); }
 .digi-empty p { margin: 0; font-size: 0.9rem; max-width: 400px; margin: 0 auto; line-height: 1.5; }
 
@@ -253,7 +276,7 @@
   color: var(--text-muted);
   padding: 2rem;
 }
-.preview-unsupported span { font-size: 3rem; display: block; margin-bottom: 1rem; }
+.preview-unsupported > svg { color: var(--text-muted); margin-bottom: 0.75rem; }
 
 .preview-footer {
   display: flex;

@@ -26,6 +26,17 @@ export default function InterviewSetup() {
   const [difficulty, setDifficulty] = useState("Medium");
   const [aiPacing] = useState("Adaptive"); // eslint-disable-line no-unused-vars
 
+  // Pull the starting difficulty from admin settings on mount so the admin's
+  // configured default actually takes effect (user can still override below).
+  useEffect(() => {
+    axios.get("/admin/settings")
+      .then(res => {
+        const sd = res.data?.starting_difficulty;
+        if (sd && ["Easy", "Medium", "Hard"].includes(sd)) setDifficulty(sd);
+      })
+      .catch(() => { /* fall back to Medium default */ });
+  }, []);
+
   // --- Hardware State (Goal #16) ---
   const videoRef = useRef(null);
   const [stream, setStream] = useState(null); // eslint-disable-line no-unused-vars
@@ -142,11 +153,33 @@ export default function InterviewSetup() {
     };
   }, []);
 
-  const canLaunch = baseMode === "custom" 
-    ? (isReady && selectedTech && selectedModule) 
+  const hasResume = baseMode === "resume"
+    && user.resume_path && user.resume_path.length > 0
+    && Array.isArray(user.skills) && user.skills.length > 0;
+
+  // Auto-redirect when user lands here via direct URL / back button
+  // without meeting the resume prerequisite
+  useEffect(() => {
+    if (baseMode === "resume" && !hasResume) {
+      notify.warning("Upload your resume to start Resume interviews");
+      navigate("/profile?focus=resume", { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const canLaunch = baseMode === "custom"
+    ? (isReady && selectedTech && selectedModule)
+    : baseMode === "resume"
+    ? (isReady && hasResume)
     : isReady;
 
   const handleLaunch = async () => {
+    // Defense-in-depth: block resume mode without resume even if canLaunch slipped
+    if (baseMode === "resume" && !hasResume) {
+      notify.warning("Upload your resume to start Resume interviews");
+      navigate("/profile?focus=resume", { replace: true });
+      return;
+    }
     setIsStarting(true);
     try {
       // Determine a readable technology name for the report history
@@ -165,20 +198,30 @@ export default function InterviewSetup() {
         roll_no: user.roll_no,
         technology_name: techName,
         level: difficulty,
+        mode: baseMode,
         questions_count: 3 
       });
 
       const interviewId = res.data.data._id;
 
+      // Resolve readable names for backend/LLM (not the MongoDB ObjectIds)
+      const moduleObj = moduleList.find(m => m._id === selectedModule);
+      const topicObj = topicList.find(t => t._id === selectedTopic);
+      const moduleName = moduleObj?.module_name || moduleObj?.name || "General";
+      const topicName = topicObj?.topic_name || topicObj?.name || "General";
+
       navigate("/interview/active", {
-        state: { 
-          baseMode, 
-          difficulty, 
+        state: {
+          baseMode,
+          difficulty,
           aiPacing,
-          technology: selectedTech,
+          technology: selectedTech,          // _id (kept for any DB ops)
+          technologyName: techName,          // readable name for LLM
           module: selectedModule,
+          moduleName,
           topic: selectedTopic,
-          interviewId: interviewId // Pass the newly generated ID to the Arena
+          topicName,
+          interviewId
         }
       });
     } catch (err) {
@@ -191,7 +234,7 @@ export default function InterviewSetup() {
   return (
     <div className={`setup-wrapper ${isDarkMode ? "dark-theme" : "light-theme"}`}>
       <div className="setup-header">
-        <button className="back-btn" onClick={() => navigate("/dashboard")}>← Dashboard</button>
+        <button className="back-btn" onClick={() => navigate("/interviews")}>← Interview Modes</button>
         <h1 className="setup-title">
           {baseMode.toUpperCase()} Interview Setup
         </h1>
@@ -237,12 +280,17 @@ export default function InterviewSetup() {
             </div>
           ) : (
             <div className="config-section mode-info">
-              <h3>Mode: {baseMode === 'resume' ? 'Resume-Based AI' : 'HR Behavioral'}</h3>
+              <h3>Mode: {baseMode === 'resume' ? 'Resume-Based Interview' : 'HR Behavioral Round'}</h3>
               <p>
-                {baseMode === 'resume' 
-                  ? "Questions will be automatically generated based on your parsed resume skills."
-                  : "Focus will be on situational judgment and behavioral soft-skills."}
+                {baseMode === 'resume'
+                  ? "AI-driven technical questions tailored to the skills parsed from your uploaded resume."
+                  : "Situational and behavioral prompts assessing communication, leadership, and decision-making."}
               </p>
+              {baseMode === 'resume' && hasResume && (
+                <p style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
+                  Detected {user.skills.length} skill{user.skills.length === 1 ? "" : "s"} from your resume: {user.skills.slice(0, 5).join(", ")}{user.skills.length > 5 ? "…" : ""}
+                </p>
+              )}
             </div>
           )}
 

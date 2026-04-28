@@ -50,9 +50,32 @@
   text-decoration: none;
   font-weight: 500;
   font-size: 0.9rem;
+  padding: 6px 2px;
+  position: relative;
   transition: color 0.2s;
 }
 .nav-link:hover { color: var(--primary); }
+.nav-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Active page indicator */
+.nav-link.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+.nav-link.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px;
+}
 
 .user-greeting {
   color: var(--text-primary);

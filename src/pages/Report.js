@@ -12,6 +12,8 @@ import {
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import IntelliLoader from "../components/IntelliLoader";
+import ShareMenu from "../components/ShareMenu";
+import { buildShareUrl } from "../api/config";
 import "./Report.css";
 
 ChartJS.register(Tooltip, Legend, ArcElement);
@@ -24,7 +26,6 @@ export default function Report() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
 
   const handleDownloadPDF = async () => {
     if (!reportRef.current) return;
@@ -98,22 +99,17 @@ export default function Report() {
   };
 
   const shareText = data
-    ? `I scored ${data.overall_score || 0}% on my ${data.technology_name || "Interview"} mock interview on IntelliView!`
+    ? `I scored ${Math.round(data.overall_score || 0)}% on my ${data.technology_name || "Interview"} mock interview on IntelliView!`
     : "";
 
-  const shareUrl = window.location.href;
-
-  const shareLinks = {
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
-    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
-    whatsapp: `https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`,
-  };
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    notify.success("Link copied to clipboard!");
-    setShareOpen(false);
-  };
+  // Share the PUBLIC profile URL (not /report/:id which requires login).
+  // Recipients land on the user's public profile and see this report in context.
+  const shareUrl = data?.roll_no
+    ? buildShareUrl(data.roll_no)
+    : window.location.href;
+  const shareTitle = data
+    ? `${data.technology_name || "Interview"} Report · IntelliView`
+    : "IntelliView Report";
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -190,22 +186,10 @@ export default function Report() {
             {downloading ? "Generating..." : "Download PDF"}
           </button>
 
-          {/* Share */}
-          <div className="share-wrapper">
-            <button className="action-btn share-btn" onClick={() => setShareOpen(!shareOpen)}>
-              Share
-            </button>
-            {shareOpen && (
-              <div className="share-dropdown">
-                <a href={shareLinks.linkedin} target="_blank" rel="noopener noreferrer" className="share-item linkedin">LinkedIn</a>
-                <a href={shareLinks.twitter} target="_blank" rel="noopener noreferrer" className="share-item twitter">Twitter / X</a>
-                <a href={shareLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="share-item whatsapp">WhatsApp</a>
-                <button className="share-item copy" onClick={handleCopyLink}>Copy Link</button>
-              </div>
-            )}
-          </div>
+          {/* Share — LinkedIn / X / Facebook / WhatsApp / Email / Copy link */}
+          <ShareMenu url={shareUrl} text={shareText} title={shareTitle} />
 
-          <button className="back-btn" onClick={() => navigate("/dashboard")}>Back</button>
+          <button className="back-btn" onClick={() => navigate("/myreports")}>← My Reports</button>
         </div>
       </div>
 

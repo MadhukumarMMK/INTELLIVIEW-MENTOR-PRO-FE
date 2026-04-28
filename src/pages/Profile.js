@@ -1,17 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "../api/axiosInstance";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useNotification } from "../context/NotificationContext";
 import IntelliLoader from "../components/IntelliLoader";
+import { FileText, CheckCircle2 } from "lucide-react";
+import ShareMenu from "../components/ShareMenu";
+import { buildShareUrl } from "../api/config";
 import { SERVER_URL } from "../api/config";
 import "./Profile.css";
 
 export default function Profile() {
   const navigate = useNavigate();
   const notify = useNotification();
+  const [searchParams] = useSearchParams();
+  const focus = searchParams.get("focus"); // "resume" when redirected from interview attempt
   const fileInputRef = useRef(null);
   const resumeInputRef = useRef(null);
   const certInputRef = useRef(null);
+  const resumeCardRef = useRef(null);
 
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const [user, setUser] = useState(storedUser);
@@ -21,6 +27,8 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [pwdData, setPwdData] = useState({ current: '', newPwd: '', confirm: '' });
   const [pwdChanging, setPwdChanging] = useState(false);
+  const [pulseUpload, setPulseUpload] = useState(false);
+  const [justUploadedResume, setJustUploadedResume] = useState(false);
 
   const handleChangePassword = async () => {
     if (!pwdData.current || !pwdData.newPwd || !pwdData.confirm) return notify.warning("All fields are required");
@@ -62,6 +70,20 @@ export default function Profile() {
     fetchProfile();
   }, [storedUser.roll_no]);
 
+  // Focus-resume mode: when user is redirected here because they tried to
+  // start a Resume interview without uploading one yet, auto-scroll to the
+  // resume card and briefly pulse the upload button.
+  useEffect(() => {
+    if (focus === "resume" && !loading && resumeCardRef.current) {
+      const t = setTimeout(() => {
+        resumeCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        setPulseUpload(true);
+        setTimeout(() => setPulseUpload(false), 3000);
+      }, 300);
+      return () => clearTimeout(t);
+    }
+  }, [focus, loading]);
+
   const handleSave = async () => {
     try {
       const res = await axios.put(`/user/profile/${user.roll_no}`, editData);
@@ -97,14 +119,38 @@ export default function Profile() {
     formData.append("file", file);
     formData.append("roll_no", user.roll_no);
     try {
-      await axios.post("/user/upload-resume-file", formData, {
+      // Use the unified endpoint that runs the Python parser AND keeps the file.
+      const uploadRes = await axios.post("/user/upload-resume", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
-      notify.success("Resume uploaded successfully!");
-      const res = await axios.get(`/user/profile/${user.roll_no}`);
-      setUser(res.data);
+
+      // Response shape: { message, extracted_data, user }
+      const updatedUser = uploadRes.data.user || uploadRes.data;
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setJustUploadedResume(true);
+
+      const extractedSkills = (updatedUser.skills || []).length;
+
+      if (focus === "resume" && extractedSkills > 0) {
+        notify.success(`${extractedSkills} skill${extractedSkills === 1 ? "" : "s"} detected! Taking you to Interview Setup…`);
+        setTimeout(() => {
+          navigate("/interview-setup", { state: { mode: "resume" }, replace: true });
+        }, 1800);
+      } else if (focus === "resume") {
+        notify.warning("Resume uploaded but we couldn't extract skills. Try a clearer PDF.");
+      } else if (extractedSkills > 0) {
+        notify.success(`Resume updated — ${extractedSkills} skill${extractedSkills === 1 ? "" : "s"} detected.`);
+      } else {
+        notify.success("Resume uploaded successfully!");
+      }
     } catch (err) {
-      notify.error("Failed to upload resume");
+      const status = err.response?.status;
+      if (status === 503) {
+        notify.error("Resume parser is offline. Please try again in a moment.");
+      } else {
+        notify.error(err.response?.data?.message || "Failed to upload resume");
+      }
     }
   };
 
@@ -170,14 +216,41 @@ export default function Profile() {
   const avatarUrl = user.profile_picture ? `${SERVER_URL}${user.profile_picture}` : null;
   const isAdmin = user.role === "admin";
 
+  const showFocusBanner = focus === "resume" && (!user.resume_path || !(user.skills || []).length);
+
   return (
     <div className="profile-wrapper">
       <div className="profile-header-bar">
         <h1>My Profile</h1>
-        <button className="btn-back" onClick={() => navigate(isAdmin ? "/admin" : "/dashboard")}>
-          {isAdmin ? "Back to Admin Panel" : "Back to Dashboard"}
-        </button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {!isAdmin && user.roll_no && (
+            <ShareMenu
+              url={buildShareUrl(user.roll_no)}
+              text={`Check out my interview reports on IntelliView`}
+              title={`${user.first_name || user.roll_no} on IntelliView`}
+            />
+          )}
+          <button className="btn-back" onClick={() => navigate(isAdmin ? "/admin" : "/dashboard")}>
+            {isAdmin ? "Back to Admin Panel" : "Back to Dashboard"}
+          </button>
+        </div>
       </div>
+
+      {showFocusBanner && (
+        <div className="focus-banner">
+          <div className="focus-banner-icon"><FileText size={28} strokeWidth={2} /></div>
+          <div className="focus-banner-content">
+            <h3>Resume required to unlock Resume interviews</h3>
+            <p>Upload your resume below. We'll extract your skills and tailor every question to what you actually know.</p>
+          </div>
+          <button
+            className="focus-banner-btn"
+            onClick={() => resumeInputRef.current?.click()}
+          >
+            Upload Now
+          </button>
+        </div>
+      )}
 
       <div className="profile-grid">
         {/* Left: Avatar + Info */}
@@ -256,19 +329,27 @@ export default function Profile() {
                   </div>
                   <span className="access-arrow">→</span>
                 </div>
-                <div className="access-item" onClick={() => navigate("/admin")}>
-                  <span className="access-icon">❓</span>
+                <div className="access-item" onClick={() => navigate("/admin?tab=directory")}>
+                  <span className="access-icon">👥</span>
                   <div className="access-info">
-                    <span className="access-title">Question Limits</span>
-                    <span className="access-desc">Resume, Custom, HR question counts</span>
+                    <span className="access-title">User Directory</span>
+                    <span className="access-desc">Search, filter, review student performance</span>
                   </div>
                   <span className="access-arrow">→</span>
                 </div>
-                <div className="access-item" onClick={() => navigate("/admin")}>
+                <div className="access-item" onClick={() => navigate("/admin?tab=user-admin")}>
+                  <span className="access-icon">🛠</span>
+                  <div className="access-info">
+                    <span className="access-title">User Admin</span>
+                    <span className="access-desc">Add single user, bulk upload, default password</span>
+                  </div>
+                  <span className="access-arrow">→</span>
+                </div>
+                <div className="access-item" onClick={() => navigate("/admin?tab=limits")}>
                   <span className="access-icon">🔒</span>
                   <div className="access-info">
-                    <span className="access-title">Interview Limits</span>
-                    <span className="access-desc">Max slots and time limits</span>
+                    <span className="access-title">Limits & Settings</span>
+                    <span className="access-desc">Question counts per mode + per-user interview cap</span>
                   </div>
                   <span className="access-arrow">→</span>
                 </div>
@@ -336,11 +417,41 @@ export default function Profile() {
 
           {/* Resume — student only */}
           {!isAdmin && (
-            <div className="profile-card">
+            <div className="profile-card resume-card" ref={resumeCardRef}>
               <h3>Resume</h3>
+
+              {justUploadedResume && (user.skills || []).length > 0 && (
+                <div className="post-upload-cta">
+                  <div className="cta-success">
+                    <CheckCircle2 size={18} strokeWidth={2.5} className="cta-check-icon" />
+                    <span>
+                      Resume uploaded — <strong>{user.skills.length} skill{user.skills.length === 1 ? "" : "s"}</strong> detected:
+                      <span className="cta-skills"> {user.skills.slice(0, 6).join(", ")}{user.skills.length > 6 ? "…" : ""}</span>
+                    </span>
+                  </div>
+                  <button
+                    className="cta-start-interview"
+                    onClick={() => navigate("/interview-setup", { state: { mode: "resume" } })}
+                  >
+                    Start your Resume Interview now →
+                  </button>
+                </div>
+              )}
+
+              {!justUploadedResume && user.resume_path && (user.skills || []).length > 0 && (
+                <p className="resume-meta">
+                  Resume on file — <strong>{user.skills.length}</strong> skill{user.skills.length === 1 ? "" : "s"} extracted
+                </p>
+              )}
+
               <div className="action-btns">
                 <button className="btn-action-profile" onClick={handleResumeDownload}>Download Resume</button>
-                <button className="btn-action-profile upload" onClick={() => resumeInputRef.current?.click()}>Upload / Update</button>
+                <button
+                  className={`btn-action-profile upload ${pulseUpload ? "pulse-attention" : ""}`}
+                  onClick={() => resumeInputRef.current?.click()}
+                >
+                  {user.resume_path ? "Replace Resume" : "Upload Resume"}
+                </button>
                 <input ref={resumeInputRef} type="file" accept=".pdf,.doc,.docx" hidden onChange={handleResumeUpload} />
               </div>
             </div>

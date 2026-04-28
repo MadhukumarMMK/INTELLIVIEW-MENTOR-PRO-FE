@@ -1,0 +1,103 @@
+.pagination-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0 4px;
+  flex-wrap: wrap;
+}
+
+.pagination-info {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.pagination-info strong {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination-size {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 28px 6px 12px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
+                    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  transition: border-color 0.15s;
+}
+.pagination-size:hover { border-color: var(--primary); }
+.pagination-size:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.pagination-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-surface);
+}
+
+.pg-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.pg-btn:hover:not(:disabled):not(.active) {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+.pg-btn.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  cursor: default;
+  box-shadow: 0 2px 8px var(--primary-light);
+}
+.pg-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.pg-btn.pg-icon { padding: 0 6px; min-width: 28px; }
+
+.pg-ellipsis {
+  color: var(--text-muted);
+  padding: 0 4px;
+  user-select: none;
+  font-weight: 500;
+}
+
+/* Mobile */
+@media (max-width: 560px) {
+  .pagination-nav { flex-direction: column; align-items: stretch; }
+  .pagination-controls { justify-content: space-between; }
+  .pagination-info { text-align: center; }
+}

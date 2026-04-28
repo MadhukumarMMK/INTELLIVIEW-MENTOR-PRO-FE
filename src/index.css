@@ -1,5 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* ===== THEME-AGNOSTIC TOKENS (apply in BOTH dark and light themes) ===== */
+:root {
+  --content-max-width: 1440px;
+  --content-max-width-narrow: 720px;
+  --content-padding: 2rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+}
+
 /* ===== DEEP OCEAN DARK THEME ===== */
 .dark-theme {
   --bg-primary: #0a0f1a;
@@ -22,6 +34,12 @@
   --accent: #8b5cf6;
   --accent-light: rgba(139, 92, 246, 0.12);
 
+  /* Icon tint surfaces — stronger than `-light` tokens for consistent icon backgrounds */
+  --icon-bg-primary: rgba(59, 130, 246, 0.18);
+  --icon-bg-success: rgba(16, 185, 129, 0.18);
+  --icon-bg-accent:  rgba(139, 92, 246, 0.18);
+  --icon-bg-warning: rgba(245, 158, 11, 0.20);
+
   --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
@@ -30,11 +48,6 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
 
   --nav-bg: #0e1525;
   --nav-border: #1e2d4a;
@@ -80,6 +93,12 @@
   --accent: #7c3aed;
   --accent-light: rgba(124, 58, 237, 0.07);
 
+  /* Icon tint surfaces — stronger than `-light` tokens for visibility on white cards */
+  --icon-bg-primary: rgba(37, 99, 235, 0.13);
+  --icon-bg-success: rgba(5, 150, 105, 0.13);
+  --icon-bg-accent:  rgba(124, 58, 237, 0.13);
+  --icon-bg-warning: rgba(217, 119, 6, 0.14);
+
   --text-primary: #0a1628;
   --text-secondary: #4a6fa5;
   --text-muted: #7a9bc7;
@@ -88,11 +107,6 @@
   --shadow-sm: 0 1px 4px rgba(10, 22, 40, 0.06);
   --shadow-md: 0 4px 12px rgba(10, 22, 40, 0.08);
   --shadow-lg: 0 8px 24px rgba(10, 22, 40, 0.1);
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
 
   --nav-bg: #ffffff;
   --nav-border: #c7d7f5;
