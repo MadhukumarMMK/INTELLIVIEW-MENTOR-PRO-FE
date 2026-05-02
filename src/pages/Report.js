@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../api/axiosInstance";
 import { useNotification } from "../context/NotificationContext";
+import { ThemeContext } from "../context/ThemeContext";
 import { Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -22,10 +23,30 @@ export default function Report() {
   const { id } = useParams();
   const navigate = useNavigate();
   const notify = useNotification();
+  const { isDarkMode } = useContext(ThemeContext);
   const reportRef = useRef(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+
+  // Theme-aware colors — Chart.js can't parse CSS variables, so we resolve
+  // them to actual hex values based on the current theme.
+  const chartTheme = useMemo(() => {
+    if (isDarkMode) {
+      return {
+        legend: '#94a3b8',                 // --text-secondary (dark)
+        sliceBorder: '#121a2e',            // --bg-surface (dark) — separates slices
+        // Lighter blues read well on dark navy
+        palette: ['#60a5fa', '#3b82f6', '#2563eb', '#7c3aed', '#a78bfa', '#c4b5fd', '#dbeafe'],
+      };
+    }
+    return {
+      legend: '#4a6fa5',                  // --text-secondary (light)
+      sliceBorder: '#ffffff',             // --bg-surface (light) — white between slices
+      // Saturated, deeper blues read well on white
+      palette: ['#1e40af', '#2563eb', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#c084fc'],
+    };
+  }, [isDarkMode]);
 
   const handleDownloadPDF = async () => {
     if (!reportRef.current) return;
@@ -102,8 +123,6 @@ export default function Report() {
     ? `I scored ${Math.round(data.overall_score || 0)}% on my ${data.technology_name || "Interview"} mock interview on IntelliView!`
     : "";
 
-  // Share the PUBLIC profile URL (not /report/:id which requires login).
-  // Recipients land on the user's public profile and see this report in context.
   const shareUrl = data?.roll_no
     ? buildShareUrl(data.roll_no)
     : window.location.href;
@@ -128,11 +147,9 @@ export default function Report() {
   if (loading) return <IntelliLoader message="Loading report" size="fullscreen" />;
   if (!data) return <div className="error-container">Report not found.</div>;
 
-  // Extract data safely
   const safeQuestions = Array.isArray(data.question_details) ? data.question_details : [];
   const emotions = data.emotions?.emotions || {};
 
-  // Calculate stats
   const answered = safeQuestions.filter(q => !q.was_skipped);
   const avgAccuracy = answered.length > 0
     ? Math.round(answered.reduce((sum, q) => sum + (q.accuracy || 0), 0) / answered.length)
@@ -144,7 +161,7 @@ export default function Report() {
     ? Math.round(answered.reduce((sum, q) => sum + (q.audio_confidence || q.fused_confidence || 0), 0) / answered.length)
     : 0;
 
-  // Emotion pie chart
+  // Theme-aware emotion palette — single hue family, adapts to light/dark
   const emotionLabels = Object.keys(emotions).length > 0 ? Object.keys(emotions) : ["Neutral"];
   const emotionValues = Object.keys(emotions).length > 0
     ? Object.values(emotions).map(v => Math.round(v * 100))
@@ -154,11 +171,13 @@ export default function Report() {
     labels: emotionLabels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
     datasets: [{
       data: emotionValues,
-      backgroundColor: ["#f85149", "#8b949e", "#d29922", "#238636", "#58a6ff", "#bc8cff", "#4BC0C0"],
+      backgroundColor: chartTheme.palette,
+      borderColor: chartTheme.sliceBorder,
+      borderWidth: 2,
+      hoverOffset: 6,
     }],
   };
 
-  // Skill-wise breakdown (group questions by tech/difficulty)
   const skillMap = {};
   safeQuestions.forEach(q => {
     if (q.was_skipped) return;
@@ -170,78 +189,69 @@ export default function Report() {
 
   return (
     <div className="report-wrapper" ref={reportRef}>
+      {/* --- Header --- */}
       <div className="report-header">
-        <div>
+        <div className="report-title-block">
           <h1>{data.technology_name || "Interview"} Report</h1>
           <p className="report-meta">
-            {new Date(data.start_date_time).toLocaleDateString("en-GB", { day: 'numeric', month: 'long', year: 'numeric' })}
-            {" - "}
-            {safeQuestions.length} questions
+            <span>{new Date(data.start_date_time).toLocaleDateString("en-GB", { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            <span className="meta-sep">·</span>
+            <span>{safeQuestions.length} {safeQuestions.length === 1 ? "question" : "questions"}</span>
+            <span className="meta-sep">·</span>
             <span className="completed-badge">Completed</span>
           </p>
         </div>
         <div className="report-actions">
-          {/* Download PDF */}
           <button className="action-btn download-btn" onClick={handleDownloadPDF} disabled={downloading}>
             {downloading ? "Generating..." : "Download PDF"}
           </button>
-
-          {/* Share — LinkedIn / X / Facebook / WhatsApp / Email / Copy link */}
           <ShareMenu url={shareUrl} text={shareText} title={shareTitle} />
-
           <button className="back-btn" onClick={() => navigate("/myreports")}>← My Reports</button>
         </div>
       </div>
 
-      {/* --- Top Stats Row (per spec Screen 5) --- */}
+      {/* --- Top Stats --- */}
       <div className="stats-row">
-        <div className="stat-box">
-          <div className="stat-label">Accuracy</div>
-          <div className="stat-value" style={{ color: avgAccuracy >= 70 ? '#238636' : avgAccuracy >= 40 ? '#d29922' : '#f85149' }}>
-            {avgAccuracy}%
-          </div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-label">Confidence</div>
-          <div className="stat-value" style={{ color: avgConfidence >= 70 ? '#238636' : avgConfidence >= 40 ? '#d29922' : '#f85149' }}>
-            {avgConfidence}%
-          </div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-label">Clarity</div>
-          <div className="stat-value" style={{ color: avgClarity >= 70 ? '#238636' : avgClarity >= 40 ? '#d29922' : '#f85149' }}>
-            {avgClarity}%
-          </div>
-        </div>
+        <StatBox label="Accuracy" value={avgAccuracy} />
+        <StatBox label="Confidence" value={avgConfidence} />
+        <StatBox label="Clarity" value={avgClarity} />
       </div>
 
       <div className="report-grid">
-        {/* Left: Emotion Pie + Skill Breakdown */}
+        {/* --- Left: Charts --- */}
         <div className="report-left">
           <div className="report-card">
-            <h3>Emotion Analysis</h3>
+            <h3 className="card-title">Emotion Analysis</h3>
             <div className="chart-container">
               <Pie data={emotionData} options={{
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { color: '#8b949e' } } }
+                plugins: {
+                  legend: {
+                    position: 'bottom',
+                    labels: {
+                      color: chartTheme.legend,
+                      font: { size: 12, family: "'Inter', sans-serif" },
+                      padding: 12,
+                      usePointStyle: true,
+                      pointStyle: 'circle'
+                    }
+                  }
+                }
               }} />
             </div>
           </div>
 
           {Object.keys(skillMap).length > 0 && (
             <div className="report-card">
-              <h3>Difficulty-wise Breakdown</h3>
+              <h3 className="card-title">Difficulty Breakdown</h3>
               <div className="skill-bars">
-                {Object.entries(skillMap).map(([skill, data]) => {
-                  const avg = Math.round(data.total / data.count);
+                {Object.entries(skillMap).map(([skill, d]) => {
+                  const avg = Math.round(d.total / d.count);
                   return (
                     <div key={skill} className="skill-row">
                       <span className="skill-name">{skill}</span>
                       <div className="skill-bar-track">
-                        <div className="skill-bar-fill" style={{
-                          width: `${avg}%`,
-                          background: avg >= 70 ? '#238636' : avg >= 40 ? '#d29922' : '#f85149'
-                        }}></div>
+                        <div className="skill-bar-fill" style={{ width: `${avg}%` }}></div>
                       </div>
                       <span className="skill-pct">{avg}%</span>
                     </div>
@@ -252,10 +262,10 @@ export default function Report() {
           )}
         </div>
 
-        {/* Right: Question-by-Question Accordion */}
+        {/* --- Right: Question Analysis --- */}
         <div className="report-right">
           <div className="report-card">
-            <h3>Question-by-Question Analysis</h3>
+            <h3 className="card-title">Question Analysis</h3>
             <div className="questions-log">
               {safeQuestions.map((q, i) => (
                 <AccordionItem key={i} index={i} question={q} />
@@ -268,31 +278,39 @@ export default function Report() {
   );
 }
 
-// Unique accent colors per question
-const qColors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
+function StatBox({ label, value }) {
+  const tone = value >= 70 ? "good" : value >= 40 ? "fair" : "poor";
+  return (
+    <div className={`stat-box stat-${tone}`}>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}<span className="stat-unit">%</span></div>
+    </div>
+  );
+}
+
+function scoreTone(value) {
+  if (value >= 70) return "good";
+  if (value >= 40) return "fair";
+  return "poor";
+}
 
 function AccordionItem({ index, question: q }) {
   const [open, setOpen] = useState(index === 0);
   const bodyRef = useRef(null);
   const innerRef = useRef(null);
-  const color = qColors[index % qColors.length];
 
-  // Measure real content height and animate to exact pixel value
   useEffect(() => {
     const body = bodyRef.current;
     if (!body) return;
     if (open) {
       const height = innerRef.current?.scrollHeight || 0;
       body.style.height = '0px';
-      // Force reflow
       body.offsetHeight; // eslint-disable-line no-unused-expressions
       body.style.height = height + 'px';
       body.style.opacity = '1';
-      // After transition, set auto so content can reflow
       const onEnd = () => { body.style.height = 'auto'; };
       body.addEventListener('transitionend', onEnd, { once: true });
     } else {
-      // Collapse: set explicit height first, then animate to 0
       const height = body.scrollHeight;
       body.style.height = height + 'px';
       body.offsetHeight; // eslint-disable-line no-unused-expressions
@@ -301,57 +319,64 @@ function AccordionItem({ index, question: q }) {
     }
   }, [open]);
 
+  const tone = q.was_skipped ? "skipped" : scoreTone(q.accuracy || 0);
+  const difficulty = (q.difficulty || 'medium').toLowerCase();
+
   return (
-    <div className={`accordion-item ${open ? 'open' : ''}`} style={{ borderLeftColor: color }}>
-      <div className="accordion-header" onClick={() => setOpen(!open)}>
+    <div className={`accordion-item ${open ? 'open' : ''}`}>
+      <button className="accordion-header" onClick={() => setOpen(!open)} type="button">
         <div className="accordion-left">
-          <span className="q-badge" style={{ background: color }}>{`Q${index + 1}`}</span>
-          <span className={`q-diff q-diff-${(q.difficulty || 'medium').toLowerCase()}`}>{q.difficulty}</span>
+          <span className="q-number">Q{index + 1}</span>
+          <span className={`q-diff q-diff-${difficulty}`}>{q.difficulty}</span>
           {q.was_skipped ? (
-            <span className="q-score-badge skipped-badge">Skipped</span>
+            <span className="q-score q-score-skipped">Skipped</span>
           ) : (
-            <span className="q-score-badge" style={{
-              background: (q.accuracy || 0) >= 70 ? 'var(--success-light)' : (q.accuracy || 0) >= 40 ? 'var(--warning-light)' : 'var(--danger-light)',
-              color: (q.accuracy || 0) >= 70 ? 'var(--success)' : (q.accuracy || 0) >= 40 ? 'var(--warning)' : 'var(--danger)'
-            }}>
-              {q.accuracy || 0}%
-            </span>
+            <span className={`q-score q-score-${tone}`}>{q.accuracy || 0}%</span>
           )}
         </div>
-        <span className={`accordion-arrow ${open ? 'open' : ''}`}>&#9662;</span>
-      </div>
+        <span className={`accordion-arrow ${open ? 'open' : ''}`} aria-hidden="true">▾</span>
+      </button>
 
       <div className="accordion-body" ref={bodyRef} style={{ height: index === 0 ? 'auto' : '0px', opacity: index === 0 ? 1 : 0 }}>
         <div ref={innerRef} className="accordion-inner">
-          <div className="qa-block question-block" style={{ borderLeftColor: color }}>
-            <span className="qa-label" style={{ color }}>Question</span>
+          <section className="qa-section">
+            <h4 className="qa-label">Question</h4>
             <p className="qa-text">{q.question}</p>
-          </div>
+          </section>
 
           {!q.was_skipped && (
             <>
-              <div className="qa-block answer-block">
-                <span className="qa-label answer-label">Your Answer</span>
-                <p className="qa-text">{q.answer}</p>
-              </div>
+              <section className="qa-section">
+                <h4 className="qa-label">Your Answer</h4>
+                <p className="qa-text">{q.answer || <em className="qa-empty">No answer recorded</em>}</p>
+              </section>
 
-              <div className="qa-block feedback-block">
-                <span className="qa-label feedback-label">AI Feedback</span>
-                <p className="qa-text feedback-text">{q.feedback}</p>
-              </div>
+              <section className="qa-section">
+                <h4 className="qa-label">AI Feedback</h4>
+                <p className="qa-text qa-feedback">{q.feedback}</p>
+              </section>
 
               <div className="qa-metrics">
-                <span>Accuracy: <strong>{q.accuracy || 0}%</strong></span>
-                <span>Confidence: <strong>{q.fused_confidence || 0}%</strong></span>
-                {q.audio_confidence != null && <span>Audio: <strong>{q.audio_confidence}%</strong></span>}
-                {q.new_difficulty !== q.difficulty && (
-                  <span className="diff-change">Level: {q.difficulty} → {q.new_difficulty}</span>
+                <Metric label="Accuracy" value={`${q.accuracy || 0}%`} />
+                <Metric label="Confidence" value={`${q.fused_confidence || 0}%`} />
+                {q.audio_confidence != null && <Metric label="Audio" value={`${q.audio_confidence}%`} />}
+                {q.new_difficulty && q.new_difficulty !== q.difficulty && (
+                  <Metric label="Next level" value={`${q.difficulty} → ${q.new_difficulty}`} highlight />
                 )}
               </div>
             </>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Metric({ label, value, highlight }) {
+  return (
+    <div className={`metric ${highlight ? 'metric-highlight' : ''}`}>
+      <span className="metric-label">{label}</span>
+      <span className="metric-value">{value}</span>
     </div>
   );
 }
