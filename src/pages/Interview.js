@@ -5,6 +5,7 @@ import { io } from "socket.io-client";
 import axios from "../api/axiosInstance";
 import { SOCKET_URL } from "../api/config";
 import { useNotification } from "../context/NotificationContext";
+import AIAvatar from "../components/AIAvatar";
 import "./Interview.css";
 
 export default function Interview() {
@@ -349,19 +350,32 @@ export default function Interview() {
     }, [isListening, loading, interviewId, navigate]);
 
     // --- 5. Speech Recognition Setup ---
+    // Robust live transcription tuned for Indian-English speakers.
+    // Key invariants:
+    //   - lang = "en-IN"  → acoustic model tuned for Indian English (much better
+    //                       recognition than "en-US" for Indian-accented speech).
+    //   - continuous = true + auto-restart on browser-fired onend → keeps the
+    //                       transcript live across natural pauses (Chrome silently
+    //                       stops after ~60s; we restart it transparently).
+    //   - interimResults = true → user sees their words as they speak.
+    //   - accumulatedFinalRef → preserves all finalized speech across restart
+    //                       cycles, so a browser auto-stop never loses prior text.
+    //   - 200ms debounced restart → prevents InvalidStateError when start()
+    //                       is called before the previous session has fully ended.
     const setupSpeechRecognition = () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             console.warn("SpeechRecognition not supported in this browser");
             return;
         }
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.maxAlternatives = 1;
-        recognitionRef.current.lang = 'en-US';
-        recognitionRef.current.onresult = (e) => {
-            // Only process NEW results from this event (not re-scan all history)
+
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 3;       // give engine room for accented variants
+        recognition.lang = 'en-IN';            // Indian English locale
+
+        recognition.onresult = (e) => {
             let newFinal = "";
             let interim = "";
             for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -372,26 +386,59 @@ export default function Interview() {
                     interim += chunk;
                 }
             }
-            // Persistently accumulate finalized text across browser restart cycles
             if (newFinal) {
                 accumulatedFinalRef.current += newFinal;
             }
+            // No auto-correction — we just join finalized + interim and clean whitespace.
             const fullText = (accumulatedFinalRef.current + interim).replace(/\s+/g, ' ').trim();
             transcriptRef.current = fullText;
             setTranscript(fullText);
         };
-        // Auto-restart on unexpected browser stops — keeps the stream live
-        recognitionRef.current.onend = () => {
-            if (recognitionRef.current && recognitionRef.current._shouldRun) {
-                try { recognitionRef.current.start(); } catch (_) {}
+
+        // Auto-restart loop — Chrome auto-stops after silence or ~60s of audio.
+        // Cap restarts so a hard mic failure doesn't hammer the browser.
+        let restartTries = 0;
+        recognition.onend = () => {
+            if (!recognition._shouldRun) { restartTries = 0; return; }
+            if (restartTries >= 50) {
+                console.warn('Speech recognition restart cap hit — giving up.');
+                restartTries = 0;
+                return;
             }
+            restartTries++;
+            // Small delay avoids "InvalidStateError: already started"
+            setTimeout(() => {
+                if (recognition._shouldRun) {
+                    try { recognition.start(); } catch (_) { /* may already be running */ }
+                }
+            }, 200);
         };
-        // Swallow benign errors (no-speech / network) — onend will still auto-restart
-        recognitionRef.current.onerror = (e) => {
-            if (e.error && e.error !== 'aborted' && e.error !== 'no-speech') {
+
+        // Reset retry counter once we're actually hearing audio — proves things work.
+        recognition.onsoundstart = () => { restartTries = 0; };
+        recognition.onspeechstart  = () => { restartTries = 0; };
+
+        recognition.onerror = (e) => {
+            // Fatal errors — stop trying, surface to user.
+            if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+                console.error('Mic permission denied — speech recognition stopped.');
+                recognition._shouldRun = false;
+                if (notify?.error) notify.error('Microphone access denied. Please allow mic permission and reload.');
+                return;
+            }
+            if (e.error === 'audio-capture') {
+                console.error('No microphone found — speech recognition stopped.');
+                recognition._shouldRun = false;
+                if (notify?.error) notify.error('No microphone detected on this device.');
+                return;
+            }
+            // Benign — onend will restart. Don't spam console for these.
+            if (e.error && e.error !== 'aborted' && e.error !== 'no-speech' && e.error !== 'network') {
                 console.log('Speech recognition error:', e.error);
             }
         };
+
+        recognitionRef.current = recognition;
     };
 
     // --- 6. Fetch first question from Groq ---
@@ -754,76 +801,14 @@ export default function Interview() {
             <div className="arena-main">
                 {/* LEFT: AI Interviewer */}
                 <div className="interviewer-panel">
-                    {/* 3D Human Avatar */}
+                    {/* AI Mentor avatar (animated SVG portrait) */}
                     <div className="avatar-area">
-                        <div className={`human-avatar-scene ${isSpeaking ? 'speaking' : ''} ${isEvaluating ? 'thinking' : ''}`}>
-                            {/* Background glow */}
-                            <div className="avatar-glow"></div>
-
-                            {/* Human bust SVG */}
-                            <svg viewBox="0 0 200 220" className="human-svg" xmlns="http://www.w3.org/2000/svg">
-                                {/* Shoulders & Neck */}
-                                <ellipse cx="100" cy="210" rx="85" ry="35" className="avatar-body" />
-                                <rect x="85" y="155" width="30" height="40" rx="8" className="avatar-neck" />
-
-                                {/* Head */}
-                                <ellipse cx="100" cy="110" rx="48" ry="55" className="avatar-head" />
-
-                                {/* Hair */}
-                                <path d="M52 105 Q55 55 100 50 Q145 55 148 105 Q148 75 130 62 Q115 52 100 50 Q85 52 70 62 Q52 75 52 105Z" className="avatar-hair" />
-
-                                {/* Ears */}
-                                <ellipse cx="52" cy="115" rx="8" ry="12" className="avatar-ear" />
-                                <ellipse cx="148" cy="115" rx="8" ry="12" className="avatar-ear" />
-
-                                {/* Eyebrows */}
-                                <path d="M72 95 Q80 90 90 93" className="avatar-brow" />
-                                <path d="M110 93 Q120 90 128 95" className="avatar-brow" />
-
-                                {/* Eyes */}
-                                <g className="avatar-eyes">
-                                    <ellipse cx="82" cy="105" rx="9" ry="6" className="avatar-eye-white" />
-                                    <circle cx="83" cy="105" r="3.5" className="avatar-pupil" />
-                                    <ellipse cx="118" cy="105" rx="9" ry="6" className="avatar-eye-white" />
-                                    <circle cx="117" cy="105" r="3.5" className="avatar-pupil" />
-                                </g>
-
-                                {/* Eye blink overlay */}
-                                <g className="blink-group">
-                                    <rect x="73" y="99" width="18" height="12" rx="6" className="blink-lid" />
-                                    <rect x="109" y="99" width="18" height="12" rx="6" className="blink-lid" />
-                                </g>
-
-                                {/* Nose */}
-                                <path d="M97 112 Q100 122 103 112" className="avatar-nose" />
-
-                                {/* Mouth */}
-                                <g className="avatar-mouth-group">
-                                    {isSpeaking ? (
-                                        <ellipse cx="100" cy="135" rx="12" ry="7" className="avatar-mouth-open" />
-                                    ) : (
-                                        <path d="M88 133 Q100 140 112 133" className="avatar-smile" />
-                                    )}
-                                </g>
-
-                                {/* Collar/Shirt detail */}
-                                <path d="M75 185 L85 175 L100 182 L115 175 L125 185" className="avatar-collar" />
-                            </svg>
-
-                            {/* Sound waves when speaking */}
-                            {isSpeaking && (
-                                <div className="human-sound-waves">
-                                    <div className="wave-ring ring-1"></div>
-                                    <div className="wave-ring ring-2"></div>
-                                    <div className="wave-ring ring-3"></div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="avatar-name-tag">IntelliView AI Interviewer</div>
-                        <div className="avatar-label">
-                            {loading ? "Connecting..." : isSpeaking ? "Speaking..." : isEvaluating ? "Analyzing your response..." : "Listening"}
-                        </div>
+                        <AIAvatar
+                            speaking={isSpeaking}
+                            listening={isListening}
+                            evaluating={isEvaluating}
+                            loading={loading}
+                        />
                     </div>
 
                     {/* Question Card */}
@@ -866,19 +851,30 @@ export default function Interview() {
 
                     {/* Live Analysis */}
                     <div className="analysis-card">
-                        <div className="info-title">Live Analysis</div>
-                        <AnalysisBar label="Confidence" value={faceConfidence} />
-                        <AnalysisBar label="Accuracy" value={lastAccuracy} />
-                        <AnalysisBar label="Clarity" value={lastClarity} />
+                        <div className="panel-head">
+                            <h4 className="panel-title">Live Performance</h4>
+                            <span className="panel-meta">Real-time</span>
+                        </div>
+                        <div className="metric-list">
+                            <Metric label="Confidence" value={faceConfidence} />
+                            <Metric label="Accuracy" value={lastAccuracy} />
+                            <Metric label="Clarity" value={lastClarity} />
+                        </div>
                     </div>
 
                     {/* Adaptive Engine Info */}
                     <div className="engine-card">
-                        <div className="info-title">Adaptive Engine</div>
-                        <p className="engine-text">Next question difficulty auto-adjusts based on your real-time confidence score via WebSocket.</p>
-                        <div className="engine-status">
-                            {isSpeaking ? "Reading question..." : isEvaluating ? "Evaluating..." : isListening ? "Listening..." : "Idle"}
+                        <div className="panel-head">
+                            <h4 className="panel-title">Adaptive Mentor</h4>
                         </div>
+                        <p className="engine-text">
+                            The next question's difficulty adjusts to match your performance.
+                        </p>
+                        <EngineStatus
+                            isSpeaking={isSpeaking}
+                            isEvaluating={isEvaluating}
+                            isListening={isListening}
+                        />
                     </div>
                 </div>
             </div>
@@ -890,8 +886,10 @@ export default function Interview() {
                     disabled={!canRecord || isEvaluating || isSpeaking}
                     onClick={() => isListening ? stopRecording() : startRecording()}
                 >
-                    <span className="control-icon">{isListening ? "⏹" : "🎤"}</span>
-                    <span className="control-label">{isSpeaking ? "Wait..." : isListening ? "Stop Recording" : "Start Recording"}</span>
+                    {isListening && <span className="rec-pulse" aria-hidden="true" />}
+                    <span className="control-label">
+                        {isSpeaking ? "Please wait" : isListening ? "Stop Recording" : "Start Recording"}
+                    </span>
                 </button>
 
                 <button
@@ -899,8 +897,10 @@ export default function Interview() {
                     onClick={handleSubmit}
                     disabled={isEvaluating || loading || isSpeaking || (!transcriptRef.current && !transcript)}
                 >
-                    <span className="control-icon">{isEvaluating ? "⏳" : "✓"}</span>
-                    <span className="control-label">{isEvaluating ? "Analyzing..." : "Submit Answer"}</span>
+                    {isEvaluating && <span className="control-spinner" aria-hidden="true" />}
+                    <span className="control-label">
+                        {isEvaluating ? "Analyzing" : "Submit Answer"}
+                    </span>
                 </button>
 
                 <button
@@ -908,8 +908,7 @@ export default function Interview() {
                     onClick={handleSkip}
                     disabled={isEvaluating || loading || isSpeaking}
                 >
-                    <span className="control-icon">⏭</span>
-                    <span className="control-label">Skip</span>
+                    <span className="control-label">Skip Question</span>
                 </button>
 
                 <button className="control-btn end-btn" onClick={async () => {
@@ -925,23 +924,43 @@ export default function Interview() {
                     } catch (_) {}
                     navigate("/dashboard");
                 }}>
-                    <span className="control-icon">✕</span>
-                    <span className="control-label">End</span>
+                    <span className="control-label">End Interview</span>
                 </button>
             </div>
         </div>
     );
 }
 
-function AnalysisBar({ label, value }) {
-    const color = value < 40 ? 'var(--danger)' : value < 70 ? 'var(--warning)' : 'var(--success)';
+function Metric({ label, value }) {
+    const safeValue = Math.max(0, Math.min(100, Math.round(value || 0)));
+    const tone = safeValue < 40 ? 'low' : safeValue < 70 ? 'mid' : 'high';
     return (
-        <div className="analysis-row">
-            <span className="analysis-label">{label}</span>
-            <div className="audio-meter">
-                <div className="audio-meter-fill" style={{ width: `${value}%`, background: color }}></div>
+        <div className={`metric-row metric-${tone}`}>
+            <div className="metric-head">
+                <span className="metric-label">{label}</span>
+                <span className="metric-value">
+                    {safeValue}<span className="metric-unit">%</span>
+                </span>
             </div>
-            <span className="analysis-value">{value}%</span>
+            <div className="metric-bar">
+                <div className="metric-bar-fill" style={{ width: `${safeValue}%` }}></div>
+            </div>
+        </div>
+    );
+}
+
+function EngineStatus({ isSpeaking, isEvaluating, isListening }) {
+    const state = isSpeaking
+        ? { key: 'speaking',   label: 'Reading question' }
+        : isEvaluating
+        ? { key: 'evaluating', label: 'Analyzing your answer' }
+        : isListening
+        ? { key: 'listening',  label: 'Listening to you' }
+        : { key: 'idle',       label: 'Standing by' };
+    return (
+        <div className={`engine-state engine-state-${state.key}`}>
+            <span className="engine-state-dot" aria-hidden="true"></span>
+            <span className="engine-state-label">{state.label}</span>
         </div>
     );
 }

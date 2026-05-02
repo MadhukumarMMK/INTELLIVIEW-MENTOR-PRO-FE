@@ -315,14 +315,8 @@ export default function InterviewSetup() {
             </div>
           </div>
           <div className="system-status">
-            <div className="status-item">
-              <span>Camera Status</span>
-              <div className={`status-indicator ${camStatus === "Ready" ? "green" : "red"}`}></div>
-            </div>
-            <div className="status-item">
-              <span>Microphone Status</span>
-              <div className={`status-indicator ${micStatus === "Ready" ? "green" : "red"}`}></div>
-            </div>
+            <StatusChip label="Camera" status={camStatus} />
+            <StatusChip label="Microphone" status={micStatus} />
           </div>
           
           <button
@@ -348,6 +342,21 @@ export default function InterviewSetup() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Compact, inline hardware status indicator. Tone reflects state:
+//   Ready       → success (steady)
+//   Checking... → muted   (pulsing)
+//   Unavailable → danger
+function StatusChip({ label, status }) {
+  const tone = status === "Ready" ? "ready" : status === "Unavailable" ? "error" : "checking";
+  return (
+    <div className={`status-chip status-chip-${tone}`}>
+      <span className="status-dot" aria-hidden="true"></span>
+      <span className="status-chip-label">{label}</span>
+      <span className="status-chip-state">{status}</span>
     </div>
   );
 }

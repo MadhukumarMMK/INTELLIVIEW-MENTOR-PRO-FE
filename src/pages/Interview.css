@@ -478,198 +478,18 @@
   overflow-y: auto;
 }
 
-/* ===== 3D Human Avatar ===== */
+/* ===== AI Mentor avatar wrapper =====
+   The actual avatar art lives in components/AIAvatar.{js,css}.
+   This is just a centered container with theme-aware background. */
 .avatar-area {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem 1rem 1rem;
+  justify-content: center;
+  padding: 1.5rem 1rem 1.25rem;
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
-  perspective: 800px;
-}
-
-.human-avatar-scene {
-  width: 160px;
-  height: 180px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: avatar-idle 4s ease-in-out infinite;
-  transform-style: preserve-3d;
-}
-
-.human-svg {
-  width: 140px;
-  height: 160px;
-  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.3));
-  z-index: 2;
-}
-
-/* Avatar glow behind */
-.avatar-glow {
-  position: absolute;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--primary-light) 0%, transparent 70%);
-  top: 20px;
-  z-index: 0;
-  transition: opacity 0.3s, transform 0.3s;
-  opacity: 0.5;
-}
-.human-avatar-scene.speaking .avatar-glow {
-  opacity: 1;
-  animation: glow-pulse 1.5s ease-in-out infinite;
-}
-
-/* SVG fills — realistic skin tones */
-.avatar-head { fill: #e8b88a; stroke: #d4a070; stroke-width: 0.5; }
-.avatar-neck { fill: #daa06d; stroke: none; }
-.avatar-ear { fill: #daa06d; stroke: #c4904d; stroke-width: 0.5; }
-.avatar-body { fill: var(--primary); stroke: none; }
-.avatar-hair { fill: #1a1a2e; stroke: #0f0f1a; stroke-width: 0.5; } /* Dark visible hair */
-.avatar-collar { fill: none; stroke: rgba(255,255,255,0.8); stroke-width: 1.5; }
-
-/* Eyes */
-.avatar-eye-white { fill: #fff; stroke: #ccc; stroke-width: 0.3; }
-.avatar-pupil { fill: #1a1a2e; transition: cx 0.3s ease; }
-.avatar-brow { fill: none; stroke: #1a1a2e; stroke-width: 2.2; stroke-linecap: round; }
-.avatar-nose { fill: none; stroke: #c49470; stroke-width: 1.5; stroke-linecap: round; }
-
-/* Eye blink — lid covers eye periodically */
-.blink-lid { fill: #e8b88a; } /* Same as skin color */
-.blink-group { animation: blink-eyes 3.5s ease-in-out infinite; }
-
-/* Mouth */
-.avatar-smile { fill: none; stroke: #c06050; stroke-width: 2; stroke-linecap: round; }
-.avatar-mouth-open {
-  fill: #6b2020;
-  stroke: #c06050;
-  stroke-width: 1.2;
-  transform-origin: center;
-}
-.human-avatar-scene.speaking .avatar-mouth-open {
-  animation: lip-sync-anim 0.3s ease-in-out infinite alternate;
-}
-
-/* Idle head sway */
-.human-avatar-scene .human-svg {
-  animation: head-sway 5s ease-in-out infinite;
-}
-.human-avatar-scene.speaking .human-svg {
-  animation: head-talk 3s ease-in-out infinite;
-}
-
-/* Name tag */
-.avatar-name-tag {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-top: 0.75rem;
-  text-align: center;
-}
-
-.avatar-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-top: 4px;
-}
-
-/* Sound wave rings */
-.human-sound-waves {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
-}
-
-.wave-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100px;
-  height: 100px;
-  border: 2px solid var(--primary);
-  border-radius: 50%;
-  transform: translate(-50%, -50%) scale(0.8);
-  opacity: 0;
-  animation: wave-expand 2s ease-out infinite;
-}
-.ring-1 { animation-delay: 0s; }
-.ring-2 { animation-delay: 0.5s; }
-.ring-3 { animation-delay: 1s; }
-
-/* Thinking state */
-.human-avatar-scene.thinking .avatar-pupil {
-  animation: look-around 2s ease-in-out infinite;
-}
-
-/* ===== Avatar Animations ===== */
-
-/* Idle breathing */
-@keyframes avatar-idle {
-  0%, 100% { transform: translateY(0) rotateY(0deg); }
-  25% { transform: translateY(-3px) rotateY(1.5deg); }
-  75% { transform: translateY(-1px) rotateY(-1.5deg); }
-}
-
-/* Head sway when idle */
-@keyframes head-sway {
-  0%, 100% { transform: rotate(0deg); }
-  30% { transform: rotate(0.5deg) translateX(1px); }
-  70% { transform: rotate(-0.5deg) translateX(-1px); }
-}
-
-/* Head movement when speaking */
-@keyframes head-talk {
-  0%, 100% { transform: rotate(0deg); }
-  20% { transform: rotate(1deg) translateY(-1px); }
-  40% { transform: rotate(-0.5deg); }
-  60% { transform: rotate(0.8deg) translateY(-1px); }
-  80% { transform: rotate(-0.3deg); }
-}
-
-/* Eye blink — realistic timing */
-@keyframes blink-eyes {
-  0%, 8%, 12%, 100% { opacity: 0; }   /* Open */
-  9%, 11% { opacity: 1; }              /* Blink at ~9% */
-  55%, 58% { opacity: 0; }
-  56%, 57% { opacity: 1; }             /* Blink again at ~56% */
-}
-
-/* Lip sync — scale the mouth open/close */
-@keyframes lip-sync-anim {
-  0% { transform: scaleY(0.6) scaleX(0.9); }
-  50% { transform: scaleY(1.4) scaleX(1.1); }
-  100% { transform: scaleY(0.8) scaleX(1); }
-}
-
-/* Sound wave rings */
-@keyframes wave-expand {
-  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }
-  100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
-}
-
-/* Glow pulse */
-@keyframes glow-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.2); opacity: 1; }
-}
-
-/* Thinking — pupils shift */
-.human-avatar-scene.thinking .avatar-pupil {
-  animation: pupil-shift 2s ease-in-out infinite;
-}
-@keyframes pupil-shift {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(2px); }
-  50% { transform: translateX(-2px); }
-  75% { transform: translateX(1px); }
 }
 
 /* Question Card */
@@ -802,45 +622,174 @@
   display: block;
 }
 
-/* Analysis Card */
-.analysis-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 1rem;
-}
+/* === Live Performance & Adaptive Mentor cards ===
+   Cleaner card head, vertical metric layout (label+value on top, bar below),
+   theme-aware colors, no chunky borders. */
 
-.info-title {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 10px;
-  font-weight: 700;
-}
-
-.analysis-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.analysis-label { font-size: 0.75rem; color: var(--text-muted); min-width: 70px; }
-.analysis-value { font-size: 0.75rem; color: var(--text-primary); min-width: 32px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
-.audio-meter { flex: 1; height: 6px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden; }
-.audio-meter-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
-
-/* Engine Card */
+.analysis-card,
 .engine-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 1rem;
+  border-radius: 12px;
+  padding: 1rem 1.125rem;
 }
-.engine-text { font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; margin: 0 0 8px; }
-.engine-status {
-  font-size: 0.75rem;
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.875rem;
+}
+
+.panel-title {
+  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--primary);
-  padding: 6px 10px;
-  background: var(--primary-light);
-  border-radius: var(--radius-sm);
-  text-align: center;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.panel-meta {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-surface-hover);
+}
+
+/* --- Metric rows (Confidence / Accuracy / Clarity) --- */
+.metric-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.metric-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.metric-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.metric-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: -0.005em;
+}
+
+.metric-value {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.metric-unit {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 1px;
+}
+
+.metric-bar {
+  width: 100%;
+  height: 5px;
+  background: var(--bg-surface-hover);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              background 0.3s ease;
+}
+
+.metric-low  .metric-bar-fill { background: var(--danger); }
+.metric-mid  .metric-bar-fill { background: var(--warning); }
+.metric-high .metric-bar-fill { background: var(--success); }
+
+/* --- Engine card --- */
+.engine-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0 0 0.875rem;
+}
+
+.engine-state {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--bg-surface-hover);
+  border: 1px solid var(--border-color);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.25s ease;
+}
+
+.engine-state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.engine-state-label {
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+/* State variants */
+.engine-state-idle .engine-state-dot {
+  background: var(--text-muted);
+}
+
+.engine-state-speaking {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.engine-state-speaking .engine-state-dot { background: var(--primary); }
+.engine-state-speaking .engine-state-label { color: var(--primary); font-weight: 600; }
+
+.engine-state-listening {
+  border-color: color-mix(in srgb, var(--success) 35%, transparent);
+  background: color-mix(in srgb, var(--success) 8%, transparent);
+}
+.engine-state-listening .engine-state-dot {
+  background: var(--success);
+  animation: pulse-soft 1.4s ease-in-out infinite;
+}
+.engine-state-listening .engine-state-label { color: var(--success); font-weight: 600; }
+
+.engine-state-evaluating {
+  border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+}
+.engine-state-evaluating .engine-state-dot {
+  background: var(--warning);
+  animation: pulse-soft 0.9s ease-in-out infinite;
+}
+.engine-state-evaluating .engine-state-label { color: var(--warning); font-weight: 600; }
+
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.4); opacity: 0.5; }
 }
 
 /* --- Progress Dots --- */
@@ -852,92 +801,228 @@
   border-color: var(--warning);
 }
 
-/* ===== Bottom Controls ===== */
+/* ===== Bottom Controls — clean text-only, professional =====
+   No emoji icons; status communicated via subtle indicators
+   (pulsing red dot for recording, spinner for evaluating). */
 .arena-controls {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  padding: 12px 1.5rem;
+  gap: 0.625rem;
+  padding: 0.875rem 1.5rem;
   background: var(--bg-surface);
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
 .control-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 10px 22px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-elevated);
+  border-radius: 8px;
+  background: var(--bg-surface);
   color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-weight: 600;
   font-family: inherit;
+  letter-spacing: -0.005em;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.15s ease, border-color 0.15s ease,
+              color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+  min-height: 40px;
 }
-.control-btn:hover:not(:disabled) { background: var(--bg-surface-hover); transform: translateY(-1px); }
-.control-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
-.control-icon { font-size: 1rem; }
-.control-label { font-size: 0.8rem; }
+.control-btn:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--text-muted);
+}
 
-/* Mic Button */
-.mic-btn { border-color: var(--primary); color: var(--primary); }
-.mic-btn:hover:not(:disabled) { background: var(--primary-light); }
+.control-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.control-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* === Primary action: Mic / Recording === */
+.mic-btn {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  min-width: 160px;
+}
+.mic-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: #fff;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+/* Recording state — solid red, subtle pulsing dot inside */
 .mic-btn.recording {
   background: var(--danger);
   border-color: var(--danger);
-  color: white;
-  animation: pulse-recording 1.5s infinite;
+  color: #fff;
+}
+.mic-btn.recording:hover:not(:disabled) {
+  background: var(--danger);
+  border-color: var(--danger);
+  filter: brightness(1.05);
 }
 
-/* Submit Button */
+.rec-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  flex-shrink: 0;
+  animation: rec-pulse-anim 1.2s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6);
+}
+
+@keyframes rec-pulse-anim {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 0 0   rgba(255, 255, 255, 0.7); }
+  70%      { opacity: 0.7; box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+}
+
+/* === Secondary action: Submit === */
 .submit-btn {
   background: var(--success);
   border-color: var(--success);
-  color: white;
+  color: #fff;
 }
-.submit-btn:hover:not(:disabled) { background: #059669; transform: translateY(-1px); }
-
-/* Skip Button */
-.skip-btn { border-color: var(--warning); color: var(--warning); }
-.skip-btn:hover:not(:disabled) { background: var(--warning-light); }
-
-/* End Button */
-.end-btn { border-color: var(--danger); color: var(--danger); }
-.end-btn:hover:not(:disabled) { background: var(--danger-light); }
-
-@keyframes pulse-recording {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+.submit-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success) 88%, black);
+  border-color: color-mix(in srgb, var(--success) 88%, black);
+  color: #fff;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--success) 30%, transparent);
 }
+
+/* Inline spinner for "Analyzing" state */
+.control-spinner {
+  width: 12px;
+  height: 12px;
+  border: 1.8px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: control-spin 0.7s linear infinite;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+@keyframes control-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Tertiary actions: Skip / End — outline style === */
+.skip-btn {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--warning) 50%, transparent);
+  color: var(--warning);
+}
+.skip-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border-color: var(--warning);
+}
+
+.end-btn {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+  color: var(--danger);
+}
+.end-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: var(--danger);
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
 /* ===== Responsive ===== */
-@media (max-width: 768px) {
+
+/* --- Tablet: stack sidebar below main avatar area, keep cards side-by-side --- */
+@media (max-width: 1024px) {
   .arena-main { grid-template-columns: 1fr; overflow-y: auto; }
-  .sidebar-panel { flex-direction: row; flex-wrap: wrap; gap: 0.5rem; }
-  .camera-card { flex: 1; min-width: 150px; }
-  .analysis-card { flex: 1; min-width: 150px; }
-  .engine-card { display: none; }
+  .sidebar-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+  }
+  .camera-card    { flex: 1 1 280px; min-width: 240px; }
+  .analysis-card  { flex: 1 1 240px; min-width: 220px; }
+  .engine-card    { flex: 1 1 240px; min-width: 220px; }
+}
+
+/* --- Mobile: full-width stacked cards, no squishing --- */
+@media (max-width: 720px) {
+  .sidebar-panel {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .camera-card,
+  .analysis-card,
+  .engine-card {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Camera keeps proper aspect ratio on mobile (was getting squished) */
+  .camera-video { aspect-ratio: 16/9; }
+
+  /* Compact metric layout — slightly smaller numbers */
+  .metric-list { gap: 0.75rem; }
+  .metric-label { font-size: 0.74rem; }
+  .metric-value { font-size: 0.85rem; }
+  .panel-title { font-size: 0.8rem; }
+  .engine-text { font-size: 0.76rem; margin-bottom: 0.7rem; }
+
+  /* Controls bar — keep labels visible (we removed icons, can't hide text now) */
   .arena-controls { gap: 6px; padding: 10px; flex-wrap: wrap; }
-  .control-btn { padding: 8px 14px; }
-  .control-label { display: none; }
+  .control-btn {
+    padding: 9px 14px;
+    font-size: 0.8rem;
+    min-height: 38px;
+  }
+  .control-label { font-size: 0.8rem; }
+  .mic-btn { min-width: 140px; }
   .arena-header { padding: 0 1rem; }
   .arena-title { font-size: 0.8rem; }
 }
 
+/* --- Small mobile (≤480px): tighten everything --- */
 @media (max-width: 480px) {
   .avatar-area { padding: 1rem; }
-  .ai-avatar { width: 70px; height: 70px; }
-  .avatar-face { width: 42px; height: 42px; }
   .question-text { font-size: 0.9rem; }
-  .control-btn { padding: 8px 10px; }
+  .control-btn {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    min-height: 36px;
+  }
+  .control-label { font-size: 0.75rem; }
+  .mic-btn { min-width: 130px; }
+
+  .analysis-card,
+  .engine-card {
+    padding: 0.875rem 1rem;
+  }
+  .panel-head { margin-bottom: 0.625rem; }
+  .panel-meta { font-size: 0.62rem; padding: 1px 7px; }
+  .engine-state { padding: 7px 10px; font-size: 0.75rem; }
 }
