@@ -684,6 +684,31 @@
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: -0.005em;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Small info chip — hover/long-press shows the title= tooltip */
+.metric-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  font-style: italic;
+  font-family: 'Times New Roman', Times, serif;
+  cursor: help;
+  line-height: 1;
+}
+.metric-row:hover .metric-info {
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
 }
 
 .metric-value {

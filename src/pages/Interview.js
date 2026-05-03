@@ -53,7 +53,9 @@ export default function Interview() {
     const accumulatedFinalRef = useRef(""); // Survives browser auto-stop/restart on pauses
     const [currentDifficulty, setCurrentDifficulty] = useState(difficulty || "Medium");
     const [isEvaluating, setIsEvaluating] = useState(false);
-    const [faceConfidence, setFaceConfidence] = useState(100);
+    // Initial value 0 — honest. Was 100 (fake "full confidence" with no
+    // detection running). Updated only when face-api actually detects a face.
+    const [faceConfidence, setFaceConfidence] = useState(0);
     const [lastAccuracy, setLastAccuracy] = useState(0);   // Updated after each answer
     const [lastClarity, setLastClarity] = useState(0);     // From audio analysis
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -120,9 +122,13 @@ export default function Interview() {
                 pendingPayloadRef.current = null;
             }
 
-            // Update live analysis bars
-            setLastAccuracy(data.accuracy || 0);
-            setLastClarity(data.audio_confidence || data.fused_confidence || 0);
+            // Update live analysis bars.
+            // Skipped questions have no answer to evaluate and no audio to analyze,
+            // so accuracy and clarity must be 0 — not stale values from prior rounds
+            // and not face-derived numbers that mislead the user.
+            const justSkipped = pending?.was_skipped;
+            setLastAccuracy(justSkipped ? 0 : (data.accuracy || 0));
+            setLastClarity(justSkipped ? 0 : (data.audio_confidence || 0));
 
             // Check if interview is complete (all questions asked)
             if (questionsAskedRef.current >= maxQuestionsRef.current || data.is_complete) {
@@ -856,9 +862,21 @@ export default function Interview() {
                             <span className="panel-meta">Real-time</span>
                         </div>
                         <div className="metric-list">
-                            <Metric label="Confidence" value={faceConfidence} />
-                            <Metric label="Accuracy" value={lastAccuracy} />
-                            <Metric label="Clarity" value={lastClarity} />
+                            <Metric
+                                label="Confidence"
+                                value={faceConfidence}
+                                hint="How composed you appear on camera — calm + positive expression. 0 means no face data captured yet."
+                            />
+                            <Metric
+                                label="Accuracy"
+                                value={lastAccuracy}
+                                hint="How technically correct your last answer was, judged by the AI."
+                            />
+                            <Metric
+                                label="Clarity"
+                                value={lastClarity}
+                                hint="How clearly you spoke — voice tone and audio quality of your answer."
+                            />
                         </div>
                     </div>
 
@@ -931,13 +949,16 @@ export default function Interview() {
     );
 }
 
-function Metric({ label, value }) {
+function Metric({ label, value, hint }) {
     const safeValue = Math.max(0, Math.min(100, Math.round(value || 0)));
     const tone = safeValue < 40 ? 'low' : safeValue < 70 ? 'mid' : 'high';
     return (
-        <div className={`metric-row metric-${tone}`}>
+        <div className={`metric-row metric-${tone}`} title={hint || undefined}>
             <div className="metric-head">
-                <span className="metric-label">{label}</span>
+                <span className="metric-label">
+                    {label}
+                    {hint && <span className="metric-info" aria-hidden="true">i</span>}
+                </span>
                 <span className="metric-value">
                     {safeValue}<span className="metric-unit">%</span>
                 </span>
