@@ -76,10 +76,10 @@
 }
 
 .action-btn {
-  padding: 9px 18px;
-  border-radius: 8px;
+  padding: 7px 14px;
+  border-radius: 7px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
   font-family: inherit;
   border: 1px solid transparent;
@@ -108,10 +108,10 @@
   background-color: var(--bg-surface);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  padding: 9px 18px;
-  border-radius: 8px;
+  padding: 7px 14px;
+  border-radius: 7px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;

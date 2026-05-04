@@ -367,16 +367,17 @@
 }
 
 .instructions-skip {
-  padding: 12px 28px;
+  padding: 9px 20px;
   background: var(--primary);
   color: white;
   border: none;
-  border-radius: var(--radius-md, 10px);
+  border-radius: 8px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.2s;
+  letter-spacing: -0.005em;
 }
 .instructions-skip:hover { background: var(--primary-hover); transform: translateY(-1px); }
 
@@ -458,11 +459,15 @@
 .timer { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--primary); background: var(--primary-light); padding: 4px 12px; border-radius: 6px; }
 .difficulty-badge { background: var(--primary-light); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 
-/* --- Main — Two Columns --- */
+/* --- Main — Two Columns ---
+   Left = main content (avatar + question + transcript), takes remaining space.
+   Right = fixed-width sidebar (camera + live metrics + adaptive engine).
+   Fixed-width sidebar keeps the camera card and the metric cards consistent
+   in size — all 3 sidebar cards are the same width, no awkward spacing. */
 .arena-main {
   flex: 1;
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1fr 320px;
   gap: 1rem;
   padding: 1rem;
   min-height: 0;
@@ -590,19 +595,21 @@
   overflow-y: auto;
 }
 
-/* Camera Card */
+/* Camera Card — sized by the sidebar column (320px fixed). 16:9 aspect ratio
+   matches native webcam framing so faces aren't cropped. */
 .camera-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   overflow: hidden;
+  width: 100%;
 }
 .camera-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  font-size: 0.75rem;
+  padding: 7px 12px;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -616,10 +623,12 @@
 }
 .camera-video {
   width: 100%;
-  aspect-ratio: 4/3;
+  aspect-ratio: 16 / 9;     /* Native webcam aspect ratio — no face cropping */
   object-fit: cover;
-  transform: scaleX(-1);
+  object-position: center;
+  transform: scaleX(-1);    /* Mirror so user sees themselves naturally */
   display: block;
+  background: #000;         /* Black frame while stream is initializing */
 }
 
 /* === Live Performance & Adaptive Mentor cards ===
@@ -980,7 +989,7 @@
 
 /* ===== Responsive ===== */
 
-/* --- Tablet: stack sidebar below main avatar area, keep cards side-by-side --- */
+/* --- Tablet (≤1024px): stack sidebar below main, cards in a row --- */
 @media (max-width: 1024px) {
   .arena-main { grid-template-columns: 1fr; overflow-y: auto; }
   .sidebar-panel {
@@ -988,8 +997,9 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     padding-top: 0.75rem;
+    justify-content: center;
   }
-  .camera-card    { flex: 1 1 280px; min-width: 240px; }
+  .camera-card    { flex: 0 1 320px; min-width: 240px; }
   .analysis-card  { flex: 1 1 240px; min-width: 220px; }
   .engine-card    { flex: 1 1 240px; min-width: 220px; }
 }
@@ -1000,15 +1010,21 @@
     flex-direction: column;
     gap: 0.75rem;
   }
-  .camera-card,
+  .camera-card {
+    flex: none;
+    width: 100%;
+    max-width: 100%;       /* Mobile: edge-to-edge OK */
+    min-width: 0;
+  }
   .analysis-card,
   .engine-card {
     flex: none;
     width: 100%;
+    max-width: none;
     min-width: 0;
   }
 
-  /* Camera keeps proper aspect ratio on mobile (was getting squished) */
+  /* Camera at 16:9 always — gives a comfortable preview without cropping face */
   .camera-video { aspect-ratio: 16/9; }
 
   /* Compact metric layout — slightly smaller numbers */

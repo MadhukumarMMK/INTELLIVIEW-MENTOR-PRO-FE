@@ -680,3 +680,19 @@
   .focus-banner { flex-direction: column; align-items: stretch; text-align: center; }
   .focus-banner-btn { width: 100%; }
 }
+
+/* ===== Small mobile (≤480px) — tighten padding, smaller fonts ===== */
+@media (max-width: 480px) {
+  .profile-wrapper { padding: 1rem; }
+  .profile-header h1, .profile-title { font-size: 1.4rem; }
+  .profile-card { padding: 1rem; border-radius: 12px; }
+  .profile-avatar-block { gap: 0.75rem; }
+  .profile-avatar { width: 80px; height: 80px; }
+  .profile-name { font-size: 1.1rem; }
+  .profile-meta { font-size: 0.78rem; }
+  .detail-grid { gap: 0.875rem; }
+  .detail-label { font-size: 0.7rem; }
+  .detail-value { font-size: 0.85rem; }
+  .action-btns { gap: 0.5rem; }
+  .action-btns button { font-size: 0.82rem; padding: 9px 14px; }
+}

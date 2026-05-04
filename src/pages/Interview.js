@@ -23,8 +23,11 @@ export default function Interview() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     // --- Instructions Screen ---
+    // Auto-advance countdown gives the user enough time to actually read the
+    // 10 instruction points before the interview starts.
+    const INSTRUCTIONS_DURATION = 20;
     const [showInstructions, setShowInstructions] = useState(true);
-    const [countdown, setCountdown] = useState(10);
+    const [countdown, setCountdown] = useState(INSTRUCTIONS_DURATION);
 
     useEffect(() => {
         if (!showInstructions) return;
@@ -144,10 +147,13 @@ export default function Interview() {
                     neutral: +(emo.neutral / emo.count).toFixed(3)
                 } : {};
 
-                // Calculate overall score from all question results
-                const answered = resultsRef.current.filter(r => !r.was_skipped);
-                const overallScore = answered.length > 0
-                    ? Math.round(answered.reduce((sum, r) => sum + r.accuracy, 0) / answered.length)
+                // Real-interview semantics: skipped questions count as 0 in
+                // the average, not "excluded". An interviewer doesn't waive
+                // the question because you skipped — it's a performance miss.
+                const all = resultsRef.current;
+                const answered = all.filter(r => !r.was_skipped); // for the "answered" count metadata
+                const overallScore = all.length > 0
+                    ? Math.round(all.reduce((sum, r) => sum + (r.was_skipped ? 0 : (r.accuracy || 0)), 0) / all.length)
                     : 0;
 
                 // Stop all media before saving results
@@ -736,7 +742,7 @@ export default function Interview() {
                             <svg viewBox="0 0 40 40">
                                 <circle cx="20" cy="20" r="18" className="countdown-bg" />
                                 <circle cx="20" cy="20" r="18" className="countdown-progress"
-                                    strokeDasharray={`${(countdown / 10) * 113} 113`} />
+                                    strokeDasharray={`${(countdown / INSTRUCTIONS_DURATION) * 113} 113`} />
                             </svg>
                             <span className="countdown-num">{countdown}</span>
                         </div>

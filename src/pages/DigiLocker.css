@@ -282,11 +282,103 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.25rem;
+  gap: 1rem;
+  padding: 0.875rem 1.25rem;
   border-top: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  flex-wrap: wrap;
 }
-.preview-meta { font-size: 0.75rem; color: var(--text-muted); }
-.preview-actions { display: flex; gap: 6px; }
+
+.preview-meta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Proper text+icon action buttons for the preview pane.
+   Distinct from .cert-action-btn (which is icon-only 30x30 for grid). */
+.preview-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 16px;
+  height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  transition: background 0.15s ease, border-color 0.15s ease,
+              color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.preview-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.preview-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preview-btn svg {
+  flex-shrink: 0;
+}
+
+/* Primary action: Download — solid green (success) */
+.preview-btn-primary {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.preview-btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success) 88%, black);
+  border-color: color-mix(in srgb, var(--success) 88%, black);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+/* Danger action: Delete — outlined red, fills on hover */
+.preview-btn-danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+  color: var(--danger);
+}
+.preview-btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Mobile: keep buttons readable, allow them to fill row if meta wraps */
+@media (max-width: 480px) {
+  .preview-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .preview-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .preview-btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {

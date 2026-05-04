@@ -150,15 +150,19 @@ export default function Report() {
   const safeQuestions = Array.isArray(data.question_details) ? data.question_details : [];
   const emotions = data.emotions?.emotions || {};
 
-  const answered = safeQuestions.filter(q => !q.was_skipped);
-  const avgAccuracy = answered.length > 0
-    ? Math.round(answered.reduce((sum, q) => sum + (q.accuracy || 0), 0) / answered.length)
+  // Real-interview semantics: a skipped question counts as a performance
+  // miss, not an "exclude from grading" pass. Average over ALL questions
+  // (including skipped, which contribute 0). Mirrors what an actual interviewer
+  // would do — you can't game your score by skipping the hard ones.
+  const totalCount = safeQuestions.length;
+  const avgAccuracy = totalCount > 0
+    ? Math.round(safeQuestions.reduce((sum, q) => sum + (q.was_skipped ? 0 : (q.accuracy || 0)), 0) / totalCount)
     : 0;
-  const avgConfidence = answered.length > 0
-    ? Math.round(answered.reduce((sum, q) => sum + (q.fused_confidence || 0), 0) / answered.length)
+  const avgConfidence = totalCount > 0
+    ? Math.round(safeQuestions.reduce((sum, q) => sum + (q.was_skipped ? 0 : (q.fused_confidence || 0)), 0) / totalCount)
     : 0;
-  const avgClarity = answered.length > 0
-    ? Math.round(answered.reduce((sum, q) => sum + (q.audio_confidence || q.fused_confidence || 0), 0) / answered.length)
+  const avgClarity = totalCount > 0
+    ? Math.round(safeQuestions.reduce((sum, q) => sum + (q.was_skipped ? 0 : (q.audio_confidence || 0)), 0) / totalCount)
     : 0;
 
   // Theme-aware emotion palette — single hue family, adapts to light/dark

@@ -223,8 +223,14 @@ export default function DigiLocker() {
                 {formatDate(previewCert.uploadedAt)} · {formatSize(previewCert.size)}
               </span>
               <div className="preview-actions">
-                <button className="cert-action-btn download" onClick={() => downloadCert(previewCert)}>Download</button>
-                <button className="cert-action-btn del" onClick={() => handleDelete(previewCert.id)}>Delete</button>
+                <button className="preview-btn preview-btn-primary" onClick={() => downloadCert(previewCert)}>
+                  <Download size={15} strokeWidth={2} />
+                  <span>Download</span>
+                </button>
+                <button className="preview-btn preview-btn-danger" onClick={() => handleDelete(previewCert.id)}>
+                  <Trash2 size={15} strokeWidth={2} />
+                  <span>Delete</span>
+                </button>
               </div>
             </div>
           </div>

@@ -250,32 +250,34 @@ export default function InterviewSetup() {
               
               <div className="input-group">
                 <label>Technology</label>
-                <select className="v2-input" value={selectedTech} onChange={(e) => setSelectedTech(e.target.value)}>
-                  <option value="">Choose Technology...</option>
-                  {techList.map(t => (
-                    <option key={t._id} value={t._id}>{t.technology_name}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={selectedTech}
+                  onChange={setSelectedTech}
+                  placeholder="Choose Technology..."
+                  options={techList.map(t => ({ value: t._id, label: t.technology_name }))}
+                />
               </div>
 
               <div className="input-group">
                 <label>Module</label>
-                <select className="v2-input" disabled={!selectedTech} value={selectedModule} onChange={(e) => setSelectedModule(e.target.value)}>
-                  <option value="">Choose Module...</option>
-                  {moduleList.map(m => (
-                    <option key={m._id} value={m._id}>{m.module_name}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={selectedModule}
+                  onChange={setSelectedModule}
+                  placeholder={selectedTech ? "Choose Module..." : "Select a technology first"}
+                  disabled={!selectedTech}
+                  options={moduleList.map(m => ({ value: m._id, label: m.module_name }))}
+                />
               </div>
 
               <div className="input-group">
                 <label>Topic</label>
-                <select className="v2-input" disabled={!selectedModule} value={selectedTopic} onChange={(e) => setSelectedTopic(e.target.value)}>
-                  <option value="">Choose Topic...</option>
-                  {topicList.map(tp => (
-                    <option key={tp._id} value={tp._id}>{tp.topic_name}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={selectedTopic}
+                  onChange={setSelectedTopic}
+                  placeholder={selectedModule ? "Choose Topic..." : "Select a module first"}
+                  disabled={!selectedModule}
+                  options={topicList.map(tp => ({ value: tp._id, label: tp.topic_name }))}
+                />
               </div>
             </div>
           ) : (
@@ -357,6 +359,78 @@ function StatusChip({ label, status }) {
       <span className="status-dot" aria-hidden="true"></span>
       <span className="status-chip-label">{label}</span>
       <span className="status-chip-state">{status}</span>
+    </div>
+  );
+}
+
+// Custom Dropdown — replaces native <select> so options are reliably visible
+// in both light and dark themes regardless of OS settings. The native <option>
+// popup is OS-rendered and not consistently themable; this is fully ours.
+function Dropdown({ value, onChange, options, placeholder, disabled }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  // Click outside closes
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  // Esc closes
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <div
+      className={`dropdown ${open ? 'open' : ''} ${disabled ? 'is-disabled' : ''}`}
+      ref={rootRef}
+    >
+      <button
+        type="button"
+        className="dropdown-trigger"
+        onClick={() => !disabled && setOpen(o => !o)}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={`dropdown-value ${selected ? '' : 'is-placeholder'}`}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <span className="dropdown-caret" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </span>
+      </button>
+      {open && (
+        <ul className="dropdown-panel" role="listbox">
+          {options.length === 0 ? (
+            <li className="dropdown-empty">No options available</li>
+          ) : (
+            options.map(opt => (
+              <li
+                key={opt.value}
+                className={`dropdown-option ${opt.value === value ? 'is-selected' : ''}`}
+                role="option"
+                aria-selected={opt.value === value}
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+              >
+                {opt.label}
+              </li>
+            ))
+          )}
+        </ul>
+      )}
     </div>
   );
 }

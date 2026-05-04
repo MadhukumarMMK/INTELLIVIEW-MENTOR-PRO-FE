@@ -1,0 +1,40 @@
+/* =========================================================
+   Skeleton — animated placeholder with shimmer.
+   Theme-aware via CSS vars; works in light + dark mode.
+   ========================================================= */
+
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface-hover) 0%,
+    color-mix(in srgb, var(--bg-surface-hover) 50%, var(--text-muted) 8%) 50%,
+    var(--bg-surface-hover) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  /* Prevents text from being selectable on the placeholder */
+  user-select: none;
+  pointer-events: none;
+  position: relative;
+  /* Slight opacity so the placeholder feels softer */
+  opacity: 0.85;
+}
+
+/* Block variant (used when applied to a <div>) */
+div.skeleton {
+  display: block;
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Optional: respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--bg-surface-hover);
+  }
+}

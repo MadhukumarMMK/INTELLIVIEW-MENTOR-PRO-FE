@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useContext } from "react";
 import axios from "../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
-import IntelliLoader from "../components/IntelliLoader";
+import Skeleton, { SkeletonText } from "../components/Skeleton";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -224,25 +224,85 @@ export default function Dashboard() {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Total interviews</div>
-          <div className="stat-value">{loading ? "—" : realStats.totalInterviews}</div>
+          <div className="stat-value">
+            {loading ? <Skeleton width={60} height={32} /> : realStats.totalInterviews}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Avg accuracy</div>
-          <div className="stat-value">{loading ? "—" : `${realStats.avgAccuracy}%`}</div>
+          <div className="stat-value">
+            {loading ? <Skeleton width={80} height={32} /> : `${realStats.avgAccuracy}%`}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Best score</div>
-          <div className="stat-value">{loading ? "—" : `${realStats.bestScore}%`}</div>
+          <div className="stat-value">
+            {loading ? <Skeleton width={80} height={32} /> : `${realStats.bestScore}%`}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Confidence avg</div>
-          <div className="stat-value">{loading ? "—" : `${realStats.confidenceAvg}%`}</div>
+          <div className="stat-value">
+            {loading ? <Skeleton width={80} height={32} /> : `${realStats.confidenceAvg}%`}
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="dashboard-loading">
-          <IntelliLoader message="Loading your analytics" />
+        // Skeleton layout that mirrors the real analytics grid — gives users
+        // a preview of the page shape so they don't feel like they're staring
+        // at a blank screen / generic spinner. Modern UX pattern.
+        <div className="analytics-grid">
+          <div className="analytics-card span-2">
+            <div className="analytics-head">
+              <Skeleton width={44} height={44} radius={12} />
+              <div style={{ flex: 1 }}>
+                <Skeleton width="40%" height={18} block />
+                <div style={{ height: 8 }} />
+                <Skeleton width="80%" height={12} block />
+              </div>
+            </div>
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <Skeleton width="20%" height={12} />
+                  <Skeleton width="100%" height={8} radius={4} style={{ flex: 1 }} />
+                  <Skeleton width={40} height={12} />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="analytics-card">
+            <div className="analytics-head">
+              <Skeleton width={44} height={44} radius={12} />
+              <Skeleton width="55%" height={18} />
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <SkeletonText lines={4} lineHeight={12} />
+            </div>
+          </div>
+          <div className="analytics-card span-2">
+            <div className="analytics-head">
+              <Skeleton width={44} height={44} radius={12} />
+              <div style={{ flex: 1 }}>
+                <Skeleton width="50%" height={18} block />
+                <div style={{ height: 8 }} />
+                <Skeleton width="70%" height={12} block />
+              </div>
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <Skeleton width="100%" height={180} radius={8} block />
+            </div>
+          </div>
+          <div className="analytics-card">
+            <div className="analytics-head">
+              <Skeleton width={44} height={44} radius={12} />
+              <Skeleton width="55%" height={18} />
+            </div>
+            <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+              <Skeleton width={140} height={140} radius="50%" />
+            </div>
+          </div>
         </div>
       ) : !hasData ? (
         <div className="empty-analytics">
