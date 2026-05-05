@@ -42,6 +42,7 @@ export default function AdminPanel() {
     const [settings, setSettings] = useState({
         max_interviews: 6, questions_per_session: 3,
         questions_resume: 10, questions_custom: 10, questions_hr: 8,
+        time_per_question_resume: 60, time_per_question_custom: 60, time_per_question_hr: 60,
         session_time_limit: 15, starting_difficulty: 'Medium'
     });
     const [loading, setLoading] = useState(false);
@@ -803,6 +804,38 @@ export default function AdminPanel() {
                                                 value={settings.starting_difficulty}
                                                 options={['Easy', 'Medium', 'Hard']}
                                                 onChange={v => setSettings({ ...settings, starting_difficulty: v })}
+                                            />
+                                        </section>
+
+                                        {/* Time Per Question — auto-advance when timer hits 0 */}
+                                        <section className="a-card limits-section">
+                                            <header className="limits-section-head">
+                                                <span className="limits-section-icon"><Lock size={18} strokeWidth={2} /></span>
+                                                <div>
+                                                    <h3>Time Per Question (seconds)</h3>
+                                                    <p>When the timer hits zero the question auto-skips and the next one loads. Users can still submit early or click Skip.</p>
+                                                </div>
+                                            </header>
+                                            <NumberStepper
+                                                label="Resume-Based Interviews"
+                                                helper="Time given to answer each question (in seconds)."
+                                                value={settings.time_per_question_resume}
+                                                onChange={v => setSettings({ ...settings, time_per_question_resume: v })}
+                                                min={15} max={600} step={15} defaultValue={60}
+                                            />
+                                            <NumberStepper
+                                                label="Custom Selection Interviews"
+                                                helper="Time given to answer each question (in seconds)."
+                                                value={settings.time_per_question_custom}
+                                                onChange={v => setSettings({ ...settings, time_per_question_custom: v })}
+                                                min={15} max={600} step={15} defaultValue={60}
+                                            />
+                                            <NumberStepper
+                                                label="HR Behavioral Interviews"
+                                                helper="Time given to answer each question (in seconds)."
+                                                value={settings.time_per_question_hr}
+                                                onChange={v => setSettings({ ...settings, time_per_question_hr: v })}
+                                                min={15} max={600} step={15} defaultValue={60}
                                             />
                                         </section>
 

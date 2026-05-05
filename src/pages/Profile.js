@@ -146,10 +146,21 @@ export default function Profile() {
       }
     } catch (err) {
       const status = err.response?.status;
-      if (status === 503) {
+      const data = err.response?.data || {};
+
+      // 409 = parsing succeeded but DB update partially failed (e.g. email
+      // already in use by another user). Skills/profile may still be saved —
+      // refresh the user from response and show the specific conflict.
+      if (status === 409) {
+        if (data.user) {
+          setUser(data.user);
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
+        notify.warning(data.message || "Some profile fields couldn't be updated.");
+      } else if (status === 503) {
         notify.error("Resume parser is offline. Please try again in a moment.");
       } else {
-        notify.error(err.response?.data?.message || "Failed to upload resume");
+        notify.error(data.message || "Failed to upload resume");
       }
     }
   };

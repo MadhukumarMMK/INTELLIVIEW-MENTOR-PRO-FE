@@ -128,7 +128,53 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ---------- Time stats — total + avg per question ---------- */
+.time-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 1.25rem;
   margin-bottom: 2rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.time-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.time-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.time-stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.time-stat-sep {
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .time-stats-row { gap: 0.5rem; padding: 0.625rem 1rem; }
+  .time-stat-value { font-size: 0.85rem; }
 }
 
 .stat-box {
@@ -226,6 +272,92 @@
   height: 240px;
   width: 100%;
   position: relative;
+}
+
+/* ---------- Emotion Analysis ---------- */
+.emotion-card .card-title { margin-bottom: 0; }
+
+.emotion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.emotion-top-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 6px 12px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.emotion-top-label {
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+.emotion-top-name { font-weight: 700; }
+.emotion-top-pct {
+  padding-left: 0.5rem;
+  border-left: 1px solid currentColor;
+  opacity: 0.85;
+}
+
+.emotion-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.emotion-legend-row {
+  display: grid;
+  grid-template-columns: 14px minmax(72px, auto) 1fr 44px;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.85rem;
+}
+
+.emotion-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.emotion-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.emotion-bar-track {
+  height: 6px;
+  background: rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.emotion-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.emotion-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.82rem;
 }
 
 /* ---------- Difficulty bars ---------- */

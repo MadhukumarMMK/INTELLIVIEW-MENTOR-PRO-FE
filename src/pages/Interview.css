@@ -459,6 +459,57 @@
 .timer { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--primary); background: var(--primary-light); padding: 4px 12px; border-radius: 6px; }
 .difficulty-badge { background: var(--primary-light); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 
+/* === Per-Question Countdown Timer ===
+   Big, prominent — communicates urgency. Color shifts to red in the last 10s,
+   muted while paused (TTS reading or answer being evaluated). */
+.q-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.q-timer-icon {
+  font-size: 0.9rem;
+  filter: grayscale(0.2);
+}
+
+.q-timer-value {
+  letter-spacing: 0.5px;
+}
+
+/* Last 10 seconds — red urgency state with subtle pulse */
+.q-timer-warn {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+  animation: q-timer-pulse 1s ease-in-out infinite;
+}
+
+@keyframes q-timer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 30%, transparent); }
+  50%      { box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger) 0%, transparent); }
+}
+
+/* Paused state — gray, no pulse. Communicates "timer not running yet". */
+.q-timer-paused {
+  background: var(--bg-surface-hover);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  animation: none;
+}
+.q-timer-paused.q-timer-warn { animation: none; }
+
 /* --- Main — Two Columns ---
    Left = main content (avatar + question + transcript), takes remaining space.
    Right = fixed-width sidebar (camera + live metrics + adaptive engine).
@@ -961,17 +1012,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* === Tertiary actions: Skip / End — outline style === */
-.skip-btn {
-  background: transparent;
-  border-color: color-mix(in srgb, var(--warning) 50%, transparent);
-  color: var(--warning);
-}
-.skip-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--warning) 12%, transparent);
-  border-color: var(--warning);
-}
-
+/* === Tertiary action: End — outline style === */
 .end-btn {
   background: transparent;
   border-color: color-mix(in srgb, var(--danger) 50%, transparent);

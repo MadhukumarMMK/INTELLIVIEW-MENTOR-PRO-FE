@@ -23,16 +23,43 @@ export default function Interview() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     // --- Instructions Screen ---
-    // Auto-advance countdown gives the user enough time to actually read the
-    // 10 instruction points before the interview starts.
+    // 20s countdown gives the user time to read the 10 instruction points,
+    // then auto-advances into the interview. Fullscreen is engaged AFTER
+    // instructions — either via the Skip button click (immediate gesture)
+    // or, on auto-advance, via a one-shot listener that catches the user's
+    // first interaction inside the interview.
     const INSTRUCTIONS_DURATION = 20;
     const [showInstructions, setShowInstructions] = useState(true);
     const [countdown, setCountdown] = useState(INSTRUCTIONS_DURATION);
 
+    // Idempotent fullscreen request. Safe to call from any user gesture —
+    // does nothing if we're already in fullscreen, swallows errors when
+    // the browser refuses (no gesture / permissions). Also locks Esc + F11
+    // via the Keyboard Lock API (Chrome/Edge only) so the user can't use
+    // those shortcuts to exit fullscreen during the interview.
+    const requestFullscreenSafe = useCallback(async () => {
+        if (document.fullscreenElement) {
+            // Already in fullscreen — still try to lock keys (idempotent)
+            try { const _p = navigator.keyboard?.lock?.(['Escape', 'F11']); _p?.catch?.(() => {}); } catch (_) {}
+            return;
+        }
+        const root = document.documentElement;
+        const req = root.requestFullscreen
+            || root.webkitRequestFullscreen
+            || root.mozRequestFullScreen
+            || root.msRequestFullscreen;
+        if (!req) return;
+        try {
+            await req.call(root);
+            // Block Esc/F11 inside fullscreen on supported browsers.
+            try { const _p = navigator.keyboard?.lock?.(['Escape', 'F11']); _p?.catch?.(() => {}); } catch (_) {}
+        } catch (_) { /* user denied or already entering */ }
+    }, []);
+
     useEffect(() => {
         if (!showInstructions) return;
         if (countdown <= 0) {
-            // Unlock TTS when countdown auto-finishes
+            // Unlock TTS so the first question reads aloud
             const unlock = new SpeechSynthesisUtterance('');
             unlock.volume = 0;
             window.speechSynthesis.speak(unlock);
@@ -45,11 +72,17 @@ export default function Interview() {
 
     // --- State ---
     const [maxQuestions, setMaxQuestions] = useState(3);
+    // Per-question time limit in seconds. Default 60s, overridden by admin
+    // setting on mount (per-mode: time_per_question_resume / _custom / _hr).
+    const [timeLimit, setTimeLimit] = useState(60);
+    const [timeRemaining, setTimeRemaining] = useState(60);
+    // Wall-clock timestamp when the current question's timer started.
+    // Used to compute time_taken when the user submits or skips.
+    const questionStartedAtRef = useRef(null);
     const [questions, setQuestions] = useState([]);
     const [currentIdx, setCurrentIdx] = useState(0);
     const [questionsAsked, setQuestionsAsked] = useState(0); // Total asked (including skips)
     const [loading, setLoading] = useState(true);
-    const [seconds, setSeconds] = useState(0);
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState("");
     const transcriptRef = useRef("");
@@ -80,22 +113,28 @@ export default function Interview() {
     useEffect(() => { questionsAskedRef.current = questionsAsked; }, [questionsAsked]);
     useEffect(() => { maxQuestionsRef.current = maxQuestions; }, [maxQuestions]);
 
-    // --- 1. Fetch Admin Settings (dynamic question count) ---
+    // --- 1. Fetch Admin Settings (dynamic question count + time limit) ---
     useEffect(() => {
         const fetchSettings = async () => {
             try {
                 const res = await axios.get("/admin/settings");
                 const s = res.data;
                 // Per-mode question counts (per spec: Resume 10, Custom 10, HR 8)
-                const modeKey = { resume: 'questions_resume', custom: 'questions_custom', hr: 'questions_hr' };
-                const count = s?.[modeKey[baseMode]] || s?.questions_per_session || 3;
+                const countKey = { resume: 'questions_resume', custom: 'questions_custom', hr: 'questions_hr' };
+                const count = s?.[countKey[baseMode]] || s?.questions_per_session || 3;
                 setMaxQuestions(count);
+
+                // Per-mode time limit (seconds). Default 60s.
+                const timeKey = { resume: 'time_per_question_resume', custom: 'time_per_question_custom', hr: 'time_per_question_hr' };
+                const t = Number(s?.[timeKey[baseMode]]) || 60;
+                setTimeLimit(t);
+                setTimeRemaining(t);
             } catch (err) {
-                console.warn("Admin settings unavailable, using default (3)");
+                console.warn("Admin settings unavailable, using defaults");
             }
         };
         fetchSettings();
-    }, []);
+    }, [baseMode]);
 
     // --- 2. WebSocket Lifecycle (waits for instructions to finish) ---
     useEffect(() => {
@@ -120,7 +159,11 @@ export default function Interview() {
                     difficulty: pending.difficulty,
                     new_difficulty: data.new_difficulty,
                     fused_confidence: data.fused_confidence || 0,
-                    audio_confidence: data.audio_confidence || null
+                    audio_confidence: data.audio_confidence || null,
+                    // Per-question timing (seconds). Echoed back from backend.
+                    time_taken: typeof data.time_taken === 'number' ? data.time_taken : (pending.time_taken || 0),
+                    time_limit: data.time_limit || pending.time_limit || 60,
+                    auto_skipped: !!data.auto_skipped,
                 });
                 pendingPayloadRef.current = null;
             }
@@ -156,6 +199,15 @@ export default function Interview() {
                     ? Math.round(all.reduce((sum, r) => sum + (r.was_skipped ? 0 : (r.accuracy || 0)), 0) / all.length)
                     : 0;
 
+                // Total time spent across all questions (seconds), and average
+                // per question. Both stored on the interview for report stats.
+                const totalTimeTaken = all.reduce((sum, r) => sum + (Number(r.time_taken) || 0), 0);
+                const avgTimePerQuestion = all.length > 0
+                    ? Math.round(totalTimeTaken / all.length)
+                    : 0;
+
+                // Suppress the fullscreen-lost overlay during clean end-of-interview
+                endingInterviewRef.current = true;
                 // Stop all media before saving results
                 killAllMedia();
 
@@ -168,9 +220,13 @@ export default function Interview() {
                         overall_score: overallScore,
                         total_questions: maxQuestionsRef.current,
                         answered: answered.length,
-                        skipped: resultsRef.current.length - answered.length
+                        skipped: resultsRef.current.length - answered.length,
+                        total_time_taken: totalTimeTaken,
+                        avg_time_per_question: avgTimePerQuestion,
                     }],
-                    overall_score: overallScore
+                    overall_score: overallScore,
+                    total_time_taken: totalTimeTaken,
+                    avg_time_per_question: avgTimePerQuestion,
                 })
                     .then(() => navigate(`/report/${interviewId}`))
                     .catch(() => navigate("/dashboard"));
@@ -247,7 +303,6 @@ export default function Interview() {
     // --- 4. Hardware Setup & Interview Init (waits for instructions) ---
     useEffect(() => {
         if (showInstructions) return;
-        const timer = setInterval(() => setSeconds(prev => prev + 1), 1000);
 
         const setupHardware = async () => {
             try {
@@ -288,10 +343,65 @@ export default function Interview() {
         setupHardware();
 
         return () => {
-            clearInterval(timer);
             killAllMedia();
         };
     }, [showInstructions]);
+
+    // --- 4a. Per-question countdown timer + auto-submit ---
+    // When the timer hits 0, the question is auto-submitted (NOT skipped) —
+    // whatever transcript the user has at that moment goes through the normal
+    // evaluation path. If the transcript is empty, Python's evaluator returns
+    // score=0 with "answer too short" feedback. Either way, the next question
+    // arrives and the user must attempt every question.
+    //
+    // Uses an absolute-timestamp pattern (not state-decrement) so it's
+    // resilient to React batching and re-renders. The auto-submit checks the
+    // current question index — critical to avoid an in-flight tick from one
+    // question accidentally submitting the NEXT question.
+    const autoSubmitRef = useRef(null); // points at handleSubmit (auto path)
+    const autoSubmittedRef = useRef(false);
+    useEffect(() => {
+        if (showInstructions || loading || !canRecord || isEvaluating || isSpeaking) {
+            return;
+        }
+
+        // Anchor start time on the first eligible tick for this question.
+        // The reset effect (below) clears it whenever currentIdx changes.
+        if (questionStartedAtRef.current == null) {
+            questionStartedAtRef.current = Date.now();
+            autoSubmittedRef.current = false;
+        }
+        const startTime = questionStartedAtRef.current;
+        // Capture which question this timer belongs to. If the user advances
+        // to a different question while a tick is queued, we DON'T submit.
+        const myQuestionIdx = currentIdx;
+
+        const tick = () => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const remaining = Math.max(0, Math.ceil(timeLimit - elapsed));
+            setTimeRemaining(remaining);
+            if (remaining <= 0 && !autoSubmittedRef.current) {
+                autoSubmittedRef.current = true;
+                clearInterval(interval);
+                // Guard: only auto-submit if we are STILL on the same question.
+                // Stops a stale tick from submitting the next question.
+                if (currentIdxRef.current === myQuestionIdx) {
+                    autoSubmitRef.current?.(true);
+                }
+            }
+        };
+
+        tick(); // run once immediately so display is accurate
+        const interval = setInterval(tick, 250); // 4×/sec for smooth updates
+        return () => clearInterval(interval);
+    }, [showInstructions, loading, canRecord, isEvaluating, isSpeaking, timeLimit, currentIdx]);
+
+    // Reset the per-question timer state whenever a NEW question arrives.
+    useEffect(() => {
+        questionStartedAtRef.current = null;
+        autoSubmittedRef.current = false;
+        setTimeRemaining(timeLimit);
+    }, [currentIdx, timeLimit]);
 
     // --- 4b. Tab Switch Proctoring (Anti-Cheat) ---
     // First switch = warning. Second switch = auto-end interview.
@@ -301,6 +411,123 @@ export default function Interview() {
     // Mirror currentQuestionText so the visibility handler always reads the
     // LATEST question, not a stale closure capture from effect mount time.
     const currentQuestionRef = useRef("");
+
+    // --- 4c. Fullscreen Lock ---
+    // Once the interview starts, the user must stay in fullscreen. Esc and
+    // F11 are blocked via the Keyboard Lock API where supported (Chrome/Edge).
+    // If the user STILL manages to exit fullscreen by any other means
+    // (Firefox/Safari, dev tools, OS-level shortcut), we treat it as a
+    // proctoring violation and immediately terminate the interview — the
+    // record is deleted and they're sent back to the dashboard.
+    const endingInterviewRef = useRef(false); // suppress termination during clean exit
+
+    // When the interview phase begins, engage fullscreen + lock Esc/F11.
+    //   - If we got here from the Skip-button click, requestFullscreenSafe
+    //     was already called inside that gesture; fullscreen is already
+    //     active and we just (re-)lock the keyboard.
+    //   - If we got here from the 20s auto-advance, there is no user gesture
+    //     available right now. We can't programmatically force fullscreen.
+    //     Instead we attach a one-shot capture-phase listener: the user's
+    //     very first interaction with the interview UI (clicking Record,
+    //     anywhere on the page, any key) silently engages fullscreen + lock.
+    useEffect(() => {
+        if (showInstructions) return;
+
+        const lockKeyboard = () => {
+            try { const _p = navigator.keyboard?.lock?.(['Escape', 'F11']); _p?.catch?.(() => {}); } catch (_) {}
+        };
+
+        if (document.fullscreenElement) {
+            lockKeyboard();
+            return () => {
+                try { navigator.keyboard?.unlock?.(); } catch (_) {}
+            };
+        }
+
+        // No fullscreen yet → wait for the next user interaction to engage it.
+        const engageOnGesture = () => {
+            document.removeEventListener('mousedown', engageOnGesture, true);
+            document.removeEventListener('keydown', engageOnGesture, true);
+            document.removeEventListener('touchstart', engageOnGesture, true);
+            if (document.fullscreenElement || endingInterviewRef.current) {
+                lockKeyboard();
+                return;
+            }
+            const root = document.documentElement;
+            const req = root.requestFullscreen
+                || root.webkitRequestFullscreen
+                || root.mozRequestFullScreen
+                || root.msRequestFullscreen;
+            if (!req) return;
+            try {
+                const p = req.call(root);
+                if (p && typeof p.then === 'function') {
+                    p.then(lockKeyboard).catch(() => {});
+                }
+            } catch (_) {}
+        };
+        document.addEventListener('mousedown', engageOnGesture, true);
+        document.addEventListener('keydown', engageOnGesture, true);
+        document.addEventListener('touchstart', engageOnGesture, true);
+
+        return () => {
+            document.removeEventListener('mousedown', engageOnGesture, true);
+            document.removeEventListener('keydown', engageOnGesture, true);
+            document.removeEventListener('touchstart', engageOnGesture, true);
+            try { navigator.keyboard?.unlock?.(); } catch (_) {}
+        };
+    }, [showInstructions]);
+
+    // If the user manages to exit fullscreen on a browser without Keyboard
+    // Lock support (Firefox / Safari), silently re-enter on their very next
+    // interaction. Any click / keypress / touch is a fresh user gesture, so
+    // requestFullscreen() is allowed. No popup, no toast — just snap back.
+    // On Chrome/Edge with the keyboard lock active, this branch is never
+    // reached because Esc/F11 are intercepted at the browser level.
+    useEffect(() => {
+        if (showInstructions) return;
+        const reengageOnNextGesture = () => {
+            const handler = () => {
+                document.removeEventListener('mousedown', handler, true);
+                document.removeEventListener('keydown', handler, true);
+                document.removeEventListener('touchstart', handler, true);
+                if (document.fullscreenElement || endingInterviewRef.current) return;
+                const root = document.documentElement;
+                const req = root.requestFullscreen
+                    || root.webkitRequestFullscreen
+                    || root.mozRequestFullScreen
+                    || root.msRequestFullscreen;
+                if (req) {
+                    try {
+                        const p = req.call(root);
+                        if (p && typeof p.then === 'function') {
+                            p.then(() => {
+                                try { const _p = navigator.keyboard?.lock?.(['Escape', 'F11']); _p?.catch?.(() => {}); } catch (_) {}
+                            }).catch(() => {});
+                        }
+                    } catch (_) {}
+                }
+            };
+            // capture-phase so we beat any other handlers that might
+            // stopPropagation / preventDefault.
+            document.addEventListener('mousedown', handler, true);
+            document.addEventListener('keydown', handler, true);
+            document.addEventListener('touchstart', handler, true);
+        };
+
+        const handleFsChange = () => {
+            if (endingInterviewRef.current) return;
+            if (!document.fullscreenElement) {
+                reengageOnNextGesture();
+            }
+        };
+        document.addEventListener('fullscreenchange', handleFsChange);
+        document.addEventListener('webkitfullscreenchange', handleFsChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFsChange);
+            document.removeEventListener('webkitfullscreenchange', handleFsChange);
+        };
+    }, [showInstructions]);
 
     useEffect(() => {
         const handleVisibility = () => {
@@ -327,6 +554,7 @@ export default function Interview() {
 
                 if (count >= 2) {
                     // AUTO-END: Delete interview and redirect
+                    endingInterviewRef.current = true;
                     killAllMedia();
                     try { axios.delete(`/interviews/delete/${interviewId}`); } catch (_) {}
                     notify.error("Interview terminated. You switched tabs multiple times.");
@@ -477,57 +705,95 @@ export default function Interview() {
     };
 
     // --- 7. TTS — Read question aloud, then enable Record button ---
+    // Three-part defensive setup:
+    //   1. Wait for voices to load before speaking (Chrome/Edge load async).
+    //   2. Small delay after cancel() so the browser's TTS queue clears
+    //      before we enqueue a new utterance — otherwise speak() silently
+    //      no-ops on a still-cancelling state.
+    //   3. Explicit volume + rate + pitch (defaults sometimes fail on
+    //      mobile or after long sessions).
     const speak = useCallback((text) => {
         if (!text) return;
 
-        // Cancel any ongoing speech
-        window.speechSynthesis.cancel();
-
-        setIsSpeaking(true);
-        setCanRecord(false);
-
-        const msg = new SpeechSynthesisUtterance(text);
-        msg.rate = 0.9;
-        msg.lang = 'en-US';
-
-        // Try to pick a good English voice
-        const voices = window.speechSynthesis.getVoices();
-        const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
-            || voices.find(v => v.lang.startsWith('en'))
-            || null;
-        if (englishVoice) msg.voice = englishVoice;
-
-        msg.onend = () => {
+        const synth = window.speechSynthesis;
+        if (!synth) {
+            // Browser doesn't support TTS — let the user record anyway
             setIsSpeaking(false);
             setCanRecord(true);
-        };
-        msg.onerror = () => {
-            setIsSpeaking(false);
-            setCanRecord(true);
-        };
-
-        // Unstick paused state
-        if (window.speechSynthesis.paused) {
-            window.speechSynthesis.resume();
+            return;
         }
 
-        window.speechSynthesis.speak(msg);
-
-        // Fallback: if nothing happens after 1 second, enable record anyway
-        setTimeout(() => {
-            if (!window.speechSynthesis.speaking) {
-                setIsSpeaking(false);
-                setCanRecord(true);
+        // Wait for voices to be available (Chrome/Edge load them async)
+        const ensureVoicesAndSpeak = (retries = 8) => {
+            const voices = synth.getVoices();
+            if (!voices.length && retries > 0) {
+                setTimeout(() => ensureVoicesAndSpeak(retries - 1), 150);
+                return;
             }
-        }, 1000);
+            doSpeak(voices);
+        };
+
+        const doSpeak = (voices) => {
+            // Cancel any pending utterance, then wait one tick before queuing
+            // a new one — Chrome has a race where speak() fires while the
+            // previous utterance is still cancelling, dropping the new one.
+            synth.cancel();
+            setIsSpeaking(true);
+            setCanRecord(false);
+
+            setTimeout(() => {
+                const msg = new SpeechSynthesisUtterance(text);
+                msg.rate = 0.95;          // slightly slower than default for clarity
+                msg.pitch = 1;
+                msg.volume = 1;           // explicit — default sometimes 0 on mobile
+                msg.lang = 'en-US';
+
+                // Pick a natural English voice — Google voices on desktop
+                // sound best, fall back to any English voice, then default.
+                const preferred =
+                    voices.find(v => v.lang.startsWith('en') && /google/i.test(v.name)) ||
+                    voices.find(v => v.lang.startsWith('en') && /microsoft/i.test(v.name)) ||
+                    voices.find(v => v.lang.startsWith('en'));
+                if (preferred) msg.voice = preferred;
+
+                msg.onend = () => {
+                    setIsSpeaking(false);
+                    setCanRecord(true);
+                };
+                msg.onerror = (e) => {
+                    console.warn('TTS error:', e?.error || e);
+                    setIsSpeaking(false);
+                    setCanRecord(true);
+                };
+
+                // Some browsers pause when the tab loses focus — make sure
+                // we're resumed before queuing the new utterance.
+                if (synth.paused) synth.resume();
+
+                synth.speak(msg);
+
+                // Watchdog: if after 2s the synth isn't actually speaking
+                // (some browsers silently drop), unblock the user.
+                setTimeout(() => {
+                    if (!synth.speaking && !synth.pending) {
+                        setIsSpeaking(false);
+                        setCanRecord(true);
+                    }
+                }, 2000);
+            }, 60);
+        };
+
+        ensureVoicesAndSpeak();
     }, []);
 
-    // Preload voices (Chrome loads them async)
+    // Preload voices (Chrome loads them async — without this, the FIRST
+    // speak() call sees an empty voices array and uses the system default,
+    // which on some setups is silent).
     useEffect(() => {
-        window.speechSynthesis.getVoices();
-        window.speechSynthesis.onvoiceschanged = () => {
-            window.speechSynthesis.getVoices();
-        };
+        const synth = window.speechSynthesis;
+        if (!synth) return;
+        synth.getVoices();
+        synth.onvoiceschanged = () => synth.getVoices();
     }, []);
 
     useEffect(() => {
@@ -599,17 +865,35 @@ export default function Interview() {
         setIsListening(false);
     };
 
-    // Build and emit the answer payload to backend
-    const emitAnswer = (isSkip) => {
+    // Build and emit the answer payload to backend.
+    // Skipping has been removed — every question is submitted (manual or auto).
+    // The `auto` flag distinguishes manual submission from time-expired
+    // auto-submission, but in both cases the user's transcript is sent for
+    // normal evaluation. If transcript is empty (silent), Python's evaluator
+    // returns score=0 with "answer too short" feedback — same as before.
+    const emitAnswer = useCallback((auto = false) => {
         const currentQuestion = typeof questions[currentIdx] === 'object'
             ? questions[currentIdx].question
             : questions[currentIdx];
 
+        // Compute elapsed time. Round to whole seconds. Cap at the time
+        // limit so a stray timer overrun can't produce a 70s on a 60s limit.
+        const startedAt = questionStartedAtRef.current;
+        const elapsed = startedAt
+            ? Math.min(timeLimit, Math.max(0, Math.round((Date.now() - startedAt) / 1000)))
+            : 0;
+
         const payload = {
             interviewId,
             lastQuestion: currentQuestion,
-            lastAnswer: isSkip ? "SKIPPED" : transcriptRef.current,
-            was_skipped: isSkip,
+            lastAnswer: transcriptRef.current,
+            was_skipped: false,                  // skipping no longer exists
+            time_taken: elapsed,
+            time_limit: timeLimit,
+            auto_submitted: !!auto,              // true when timer expired
+            // Legacy field kept for back-compat with existing report code that
+            // shows a "Time expired" badge based on this flag.
+            auto_skipped: !!auto,
             currentQuestionIndex: currentIdx,
             totalQuestions: maxQuestions,
             questionsAsked: questionsAsked,
@@ -625,10 +909,12 @@ export default function Interview() {
 
         pendingPayloadRef.current = payload;
         socketRef.current.emit("submit_multimodal_answer", payload);
-    };
+    }, [questions, currentIdx, timeLimit, interviewId, maxQuestions, questionsAsked, user.roll_no, user.skills, currentDifficulty, technologyName, moduleName, topicName, baseMode]);
 
-    // --- 9. Submit Answer / Skip ---
-    const handleSubmit = () => {
+    // --- 9. Submit Answer (manual or auto) ---
+    // `auto = true` means the timer hit zero. Same flow as a manual submit —
+    // we just flag it for the report. No skipping concept anywhere.
+    const handleSubmit = useCallback((auto = false) => {
         if (isEvaluating || loading) return;
         setIsEvaluating(true);
         if (recognitionRef.current) recognitionRef.current._shouldRun = false;
@@ -639,24 +925,25 @@ export default function Interview() {
             mediaRecorderRef.current.onstop = () => {
                 setIsListening(false);
                 // Small delay ensures the final audio_chunk socket event is sent
-                setTimeout(() => emitAnswer(false), 200);
+                setTimeout(() => emitAnswer(auto), 200);
             };
             try { mediaRecorderRef.current.stop(); } catch (_) {
                 setIsListening(false);
-                emitAnswer(false);
+                emitAnswer(auto);
             }
         } else {
             setIsListening(false);
-            emitAnswer(false);
+            emitAnswer(auto);
         }
-    };
+    }, [isEvaluating, loading, emitAnswer]);
 
-    const handleSkip = () => {
-        if (isEvaluating || loading) return;
-        setIsEvaluating(true);
-        stopRecording();
-        emitAnswer(true);
-    };
+    // Keep the ref pointing at the latest handleSubmit so the timer effect
+    // (declared earlier in the component) can call it via the ref without
+    // a temporal-dead-zone reference. Auto-submission on timer expiry uses
+    // this — same flow as manual submit, just with auto=true.
+    useEffect(() => {
+        autoSubmitRef.current = (auto) => handleSubmit(auto);
+    }, [handleSubmit]);
 
     // --- 10. Helpers ---
     const formatTime = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
@@ -681,8 +968,8 @@ export default function Interview() {
                 "Your camera must stay on for facial analysis",
                 "Do NOT switch tabs — it may end your interview",
                 "Click Record after the question is read to you",
-                "You can skip questions but they still count",
-                "Take your time — there is no time limit per answer",
+                "Every question must be attempted — there is no skip option",
+                "A per-question timer auto-submits your answer when it expires",
                 "Your performance report will be available after completion"
             ]
         },
@@ -696,8 +983,8 @@ export default function Interview() {
                 "Speak clearly and maintain eye contact with the camera",
                 "Do NOT switch tabs — it may end your interview",
                 "Click Record after the AI finishes reading the question",
-                "You can skip questions but they still count",
-                "Be honest and structured in your responses",
+                "Every question must be attempted — there is no skip option",
+                "A per-question timer auto-submits your answer when it expires",
                 "Your emotional confidence is being analyzed in real-time"
             ]
         },
@@ -711,8 +998,8 @@ export default function Interview() {
                 "Your camera must stay on for facial emotion detection",
                 "Do NOT switch tabs — it may terminate your interview",
                 "Click Record only after the AI finishes reading",
-                "You can skip questions but they still count toward total",
-                "No time limit — answer at your own pace",
+                "Every question must be attempted — there is no skip option",
+                "A per-question timer auto-submits your answer when it expires",
                 "A detailed report with scores will be generated after"
             ]
         }
@@ -746,28 +1033,22 @@ export default function Interview() {
                             </svg>
                             <span className="countdown-num">{countdown}</span>
                         </div>
-                        <button className="instructions-skip" onClick={() => {
-                            // Unlock browser TTS with a tiny utterance on user click
-                            window.speechSynthesis.cancel();
-                            const unlock = new SpeechSynthesisUtterance('.');
-                            unlock.volume = 0.01;
-                            window.speechSynthesis.speak(unlock);
-                            // Request fullscreen on the user gesture — browsers
-                            // require an explicit click to allow fullscreen.
-                            // If user later presses Esc to exit, that's fine —
-                            // we don't penalize. Tab switches remain a violation
-                            // and are handled separately by visibilitychange.
-                            const root = document.documentElement;
-                            const req = root.requestFullscreen
-                                || root.webkitRequestFullscreen
-                                || root.mozRequestFullScreen
-                                || root.msRequestFullscreen;
-                            if (req) {
-                                try { req.call(root)?.catch?.(() => {}); } catch (_) {}
-                            }
-                            setShowInstructions(false);
-                        }}>
-                            {countdown > 0 ? `Skip (${countdown}s)` : "Start Interview"}
+                        <button
+                            className="instructions-skip"
+                            onClick={() => {
+                                // Unlock browser TTS with a tiny utterance on user click
+                                window.speechSynthesis.cancel();
+                                const unlock = new SpeechSynthesisUtterance('.');
+                                unlock.volume = 0.01;
+                                window.speechSynthesis.speak(unlock);
+                                // Belt-and-braces: if fullscreen wasn't engaged on
+                                // the previous page (e.g., user landed here via
+                                // refresh/direct URL), this click is a fresh gesture
+                                // we can use to enter fullscreen.
+                                requestFullscreenSafe();
+                                setShowInstructions(false);
+                            }}>
+                            {countdown > 0 ? `Skip (${countdown}s)` : "Start Now"}
                         </button>
                     </div>
                 </div>
@@ -804,7 +1085,16 @@ export default function Interview() {
                     <span className="header-q-count">Q{questionsAsked}/{maxQuestions}</span>
                 </div>
                 <div className="header-right">
-                    <div className="timer">{formatTime(seconds)}</div>
+                    {/* Per-question countdown — turns red in the last 10s.
+                        Pauses while AI is reading the question or while
+                        we're evaluating the previous answer. */}
+                    <div
+                        className={`q-timer ${timeRemaining <= 10 ? 'q-timer-warn' : ''} ${!canRecord || isEvaluating ? 'q-timer-paused' : ''}`}
+                        title={`Time per question: ${timeLimit}s — auto-submits at 0`}
+                    >
+                        <span className="q-timer-icon" aria-hidden="true">⏱</span>
+                        <span className="q-timer-value">{formatTime(timeRemaining)}</span>
+                    </div>
                     <div className="difficulty-badge">{currentDifficulty}</div>
                 </div>
             </div>
@@ -918,21 +1208,18 @@ export default function Interview() {
 
                 <button
                     className="control-btn submit-btn"
-                    onClick={handleSubmit}
+                    onClick={() => handleSubmit(false)}
                     disabled={isEvaluating || loading || isSpeaking || (!transcriptRef.current && !transcript)}
+                    title={(!transcriptRef.current && !transcript) ? "Record an answer first, or wait for the timer to auto-submit" : ""}
                 >
                     {isEvaluating && <span className="control-spinner" aria-hidden="true" />}
                     <span className="control-label">
-                        {isEvaluating ? "Analyzing" : "Submit Answer"}
+                        {isEvaluating
+                            ? "Analyzing"
+                            : questionsAsked >= maxQuestions
+                                ? "Finish Interview"
+                                : "Next Question →"}
                     </span>
-                </button>
-
-                <button
-                    className="control-btn skip-btn"
-                    onClick={handleSkip}
-                    disabled={isEvaluating || loading || isSpeaking}
-                >
-                    <span className="control-label">Skip Question</span>
                 </button>
 
                 <button className="control-btn end-btn" onClick={async () => {
@@ -941,8 +1228,11 @@ export default function Interview() {
                         "End Interview"
                     );
                     if (!ok) return;
+                    // Set flag BEFORE exiting fullscreen so the fullscreenchange
+                    // listener doesn't pop the "fullscreen lost" overlay during
+                    // a legitimate end-of-interview.
+                    endingInterviewRef.current = true;
                     killAllMedia();
-                    // Delete the in-progress interview
                     try {
                         await axios.delete(`/interviews/delete/${interviewId}`);
                     } catch (_) {}

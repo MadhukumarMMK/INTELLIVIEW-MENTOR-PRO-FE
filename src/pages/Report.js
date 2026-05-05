@@ -29,22 +29,35 @@ export default function Report() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
+  // Emotion-specific palette — each emotion maps to a hue that intuitively
+  // communicates that feeling (joy=gold, calm=blue, anger=red, etc.). Two
+  // shade families: lighter for dark mode, deeper for light mode.
+  const EMOTION_COLORS = useMemo(() => (isDarkMode ? {
+    happy:    '#fbbf24',   // amber  — joy
+    neutral:  '#94a3b8',   // slate  — calm baseline
+    sad:      '#60a5fa',   // sky    — melancholy
+    angry:    '#f87171',   // red    — frustration
+    fear:     '#a78bfa',   // violet — anxiety
+    surprise: '#34d399',   // emerald — alert
+    disgust:  '#84cc16',   // lime   — aversion
+    fallback: '#cbd5e1',
+  } : {
+    happy:    '#d97706',
+    neutral:  '#475569',
+    sad:      '#1d4ed8',
+    angry:    '#b91c1c',
+    fear:     '#6d28d9',
+    surprise: '#047857',
+    disgust:  '#65a30d',
+    fallback: '#64748b',
+  }), [isDarkMode]);
+
   // Theme-aware colors — Chart.js can't parse CSS variables, so we resolve
   // them to actual hex values based on the current theme.
   const chartTheme = useMemo(() => {
-    if (isDarkMode) {
-      return {
-        legend: '#94a3b8',                 // --text-secondary (dark)
-        sliceBorder: '#121a2e',            // --bg-surface (dark) — separates slices
-        // Lighter blues read well on dark navy
-        palette: ['#60a5fa', '#3b82f6', '#2563eb', '#7c3aed', '#a78bfa', '#c4b5fd', '#dbeafe'],
-      };
-    }
     return {
-      legend: '#4a6fa5',                  // --text-secondary (light)
-      sliceBorder: '#ffffff',             // --bg-surface (light) — white between slices
-      // Saturated, deeper blues read well on white
-      palette: ['#1e40af', '#2563eb', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#c084fc'],
+      legend: isDarkMode ? '#94a3b8' : '#4a6fa5',
+      sliceBorder: isDarkMode ? '#121a2e' : '#ffffff',
     };
   }, [isDarkMode]);
 
@@ -71,11 +84,96 @@ export default function Report() {
       await new Promise(r => setTimeout(r, 100));
 
       // 3. Capture
+      // html2canvas 1.4 can't parse modern CSS like color-mix(), oklch(),
+      // lab(), etc. — encountering one throws and aborts the whole capture.
+      // We patch the cloned document via onclone to strip those out before
+      // html2canvas reads computed styles. We don't touch the live DOM so
+      // the on-screen UI keeps its modern colors.
+      // Replace any color-mix()/oklch()/lab()/etc. function calls in the
+      // given string with a fallback color, while correctly skipping over
+      // nested parens (e.g., color-mix(in srgb, rgb(255,0,0) 30%, transparent)).
+      const FUNC_OPEN = /(color-mix|oklch|oklab|lab|lch)\(/i;
+      const replaceColorFns = (input, fallback) => {
+        if (!input || typeof input !== 'string') return input;
+        let result = input;
+        while (true) {
+          const m = result.match(FUNC_OPEN);
+          if (!m) break;
+          const start = m.index;
+          let depth = 1;
+          let i = start + m[0].length;
+          while (i < result.length && depth > 0) {
+            const ch = result[i];
+            if (ch === '(') depth++;
+            else if (ch === ')') depth--;
+            i++;
+          }
+          if (depth !== 0) break; // unbalanced — bail to avoid infinite loop
+          result = result.slice(0, start) + fallback + result.slice(i);
+        }
+        return result;
+      };
+      const containsUnsupported = (s) => typeof s === 'string' && FUNC_OPEN.test(s);
+
+      const stripUnsupportedColors = (root) => {
+        // Inline-style attribute scrub
+        root.querySelectorAll('[style]').forEach((el) => {
+          const s = el.getAttribute('style');
+          if (containsUnsupported(s)) {
+            el.setAttribute('style', replaceColorFns(s, 'transparent'));
+          }
+        });
+        // Walk the cloned document's stylesheets and rewrite any cssText
+        // that contains color-mix / oklch / etc. This catches stylesheet
+        // rules (not just inline styles) so html2canvas never sees them.
+        try {
+          const sheets = root.styleSheets;
+          for (let i = 0; i < sheets.length; i++) {
+            let rules;
+            try { rules = sheets[i].cssRules; } catch (_) { continue; } // CORS-blocked sheet
+            if (!rules) continue;
+            for (let j = 0; j < rules.length; j++) {
+              const rule = rules[j];
+              if (!rule || !rule.style) continue;
+              for (let k = 0; k < rule.style.length; k++) {
+                const prop = rule.style[k];
+                const val = rule.style.getPropertyValue(prop);
+                if (containsUnsupported(val)) {
+                  // Replace problem function with a flat fallback color.
+                  // Borders/box-shadows lose tint but the layout is preserved.
+                  rule.style.setProperty(prop, replaceColorFns(val, 'rgba(148,163,184,0.25)'));
+                }
+              }
+            }
+          }
+        } catch (_) { /* best-effort */ }
+        // Inject explicit overrides for the rules we know about — covers
+        // any stylesheet we couldn't reach (cross-origin) and gives nicer
+        // tints than the generic fallback above.
+        const style = root.ownerDocument.createElement('style');
+        style.textContent = `
+          .completed-badge { border-color: rgba(34, 197, 94, 0.3) !important; }
+          .emotion-swatch { box-shadow: none !important; }
+          .emotion-bar-track { background: rgba(148, 163, 184, 0.22) !important; }
+          .q-diff-easy   { border-color: rgba(16, 185, 129, 0.35) !important; }
+          .q-diff-medium { border-color: rgba(245, 158, 11, 0.35) !important; }
+          .q-diff-hard   { border-color: rgba(239, 68, 68, 0.35) !important; }
+          .q-score-good { background: rgba(16, 185, 129, 0.15) !important; }
+          .q-score-fair { background: rgba(245, 158, 11, 0.15) !important; }
+          .q-score-poor { background: rgba(239, 68, 68, 0.15) !important; }
+        `;
+        root.head?.appendChild(style);
+      };
+
       const canvas = await html2canvas(reportRef.current, {
         scale: 2, useCORS: true,
         backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim() || '#0a0f1a',
         scrollY: -window.scrollY,
-        windowHeight: reportRef.current.scrollHeight
+        windowHeight: reportRef.current.scrollHeight,
+        onclone: (clonedDoc) => stripUnsupportedColors(clonedDoc),
+        // Don't kill the whole capture if a single image fails to load.
+        imageTimeout: 8000,
+        logging: false,
       });
 
       // 4. Restore accordions
@@ -165,22 +263,27 @@ export default function Report() {
     ? Math.round(safeQuestions.reduce((sum, q) => sum + (q.was_skipped ? 0 : (q.audio_confidence || 0)), 0) / totalCount)
     : 0;
 
-  // Theme-aware emotion palette — single hue family, adapts to light/dark
-  const emotionLabels = Object.keys(emotions).length > 0 ? Object.keys(emotions) : ["Neutral"];
-  const emotionValues = Object.keys(emotions).length > 0
-    ? Object.values(emotions).map(v => Math.round(v * 100))
-    : [100];
+  // Each emotion gets its own meaningful hue (joy=gold, calm=blue, anger=red, …).
+  // Sort by value so the dominant emotion takes the prime spot in the legend.
+  const emotionLabels = Object.keys(emotions).length > 0 ? Object.keys(emotions) : ["neutral"];
+  const emotionRaw = Object.keys(emotions).length > 0
+    ? emotionLabels.map(k => ({ key: k, value: Math.round((emotions[k] || 0) * 100) }))
+    : [{ key: "neutral", value: 100 }];
+  const emotionSorted = [...emotionRaw].sort((a, b) => b.value - a.value);
+  const topEmotion = emotionSorted[0];
 
   const emotionData = {
-    labels: emotionLabels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+    labels: emotionSorted.map(e => e.key.charAt(0).toUpperCase() + e.key.slice(1)),
     datasets: [{
-      data: emotionValues,
-      backgroundColor: chartTheme.palette,
+      data: emotionSorted.map(e => e.value),
+      backgroundColor: emotionSorted.map(e => EMOTION_COLORS[e.key] || EMOTION_COLORS.fallback),
       borderColor: chartTheme.sliceBorder,
-      borderWidth: 2,
-      hoverOffset: 6,
+      borderWidth: 3,
+      hoverOffset: 10,
+      hoverBorderWidth: 3,
     }],
   };
+
 
   const skillMap = {};
   safeQuestions.forEach(q => {
@@ -190,6 +293,14 @@ export default function Report() {
     skillMap[skill].total += q.accuracy || 0;
     skillMap[skill].count += 1;
   });
+
+  // Time stats — prefer the totals computed at interview-end and stored on
+  // the interview doc; otherwise sum from question_details for older interviews
+  // that didn't have timing.
+  const totalTimeTaken = data.total_time_taken
+    ?? safeQuestions.reduce((sum, q) => sum + (Number(q.time_taken) || 0), 0);
+  const avgTimePerQuestion = data.avg_time_per_question
+    ?? (safeQuestions.length > 0 ? Math.round(totalTimeTaken / safeQuestions.length) : 0);
 
   return (
     <div className="report-wrapper" ref={reportRef}>
@@ -221,27 +332,91 @@ export default function Report() {
         <StatBox label="Clarity" value={avgClarity} />
       </div>
 
+      {/* --- Time Stats — total interview duration + average per question --- */}
+      {(totalTimeTaken > 0 || avgTimePerQuestion > 0) && (
+        <div className="time-stats-row">
+          <div className="time-stat">
+            <span className="time-stat-label">Total time taken</span>
+            <span className="time-stat-value">{formatDuration(totalTimeTaken)}</span>
+          </div>
+          <div className="time-stat-sep" aria-hidden="true">·</div>
+          <div className="time-stat">
+            <span className="time-stat-label">Avg per question</span>
+            <span className="time-stat-value">{formatDuration(avgTimePerQuestion)}</span>
+          </div>
+        </div>
+      )}
+
       <div className="report-grid">
         {/* --- Left: Charts --- */}
         <div className="report-left">
-          <div className="report-card">
-            <h3 className="card-title">Emotion Analysis</h3>
+          <div className="report-card emotion-card">
+            <div className="emotion-header">
+              <h3 className="card-title">Emotion Analysis</h3>
+              {topEmotion && topEmotion.value > 0 && (
+                <div
+                  className="emotion-top-chip"
+                  style={{
+                    background: hexToRgba(EMOTION_COLORS[topEmotion.key] || EMOTION_COLORS.fallback, 0.18),
+                    borderColor: hexToRgba(EMOTION_COLORS[topEmotion.key] || EMOTION_COLORS.fallback, 0.5),
+                    color: EMOTION_COLORS[topEmotion.key] || EMOTION_COLORS.fallback,
+                  }}
+                  title="Dominant emotion across the interview"
+                >
+                  <span className="emotion-top-label">Dominant</span>
+                  <span className="emotion-top-name">
+                    {topEmotion.key.charAt(0).toUpperCase() + topEmotion.key.slice(1)}
+                  </span>
+                  <span className="emotion-top-pct">{topEmotion.value}%</span>
+                </div>
+              )}
+            </div>
+
             <div className="chart-container">
               <Pie data={emotionData} options={{
                 maintainAspectRatio: false,
+                cutout: '55%',
                 plugins: {
-                  legend: {
-                    position: 'bottom',
-                    labels: {
-                      color: chartTheme.legend,
-                      font: { size: 12, family: "'Inter', sans-serif" },
-                      padding: 12,
-                      usePointStyle: true,
-                      pointStyle: 'circle'
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: chartTheme.sliceBorder === '#ffffff' ? '#0a1628' : '#0f172a',
+                    titleColor: '#f1f5f9',
+                    bodyColor: '#e2e8f0',
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                      label: (ctx) => `${ctx.label}: ${ctx.parsed}%`
                     }
                   }
                 }
               }} />
+            </div>
+
+            {/* Custom legend — colored swatches with values, more readable
+                than Chart.js's default and theme-aware. */}
+            <div className="emotion-legend">
+              {emotionSorted.map(e => (
+                <div key={e.key} className="emotion-legend-row">
+                  <span
+                    className="emotion-swatch"
+                    style={{ background: EMOTION_COLORS[e.key] || EMOTION_COLORS.fallback }}
+                    aria-hidden="true"
+                  />
+                  <span className="emotion-name">
+                    {e.key.charAt(0).toUpperCase() + e.key.slice(1)}
+                  </span>
+                  <div className="emotion-bar-track">
+                    <div
+                      className="emotion-bar-fill"
+                      style={{
+                        width: `${e.value}%`,
+                        background: EMOTION_COLORS[e.key] || EMOTION_COLORS.fallback
+                      }}
+                    />
+                  </div>
+                  <span className="emotion-value">{e.value}%</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -296,6 +471,28 @@ function scoreTone(value) {
   if (value >= 70) return "good";
   if (value >= 40) return "fair";
   return "poor";
+}
+
+// Convert "#rrggbb" to "rgba(r, g, b, a)" — used for inline-style tints in
+// the emotion chip. We avoid color-mix() here because html2canvas (1.4) used
+// for PDF export can't parse it and the download fails.
+function hexToRgba(hex, alpha) {
+  if (!hex || typeof hex !== 'string') return `rgba(100, 116, 139, ${alpha})`;
+  const v = hex.replace('#', '').trim();
+  if (v.length !== 6) return `rgba(100, 116, 139, ${alpha})`;
+  const r = parseInt(v.substring(0, 2), 16);
+  const g = parseInt(v.substring(2, 4), 16);
+  const b = parseInt(v.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Pretty-print a duration in seconds: 45s, 1m, 2m 30s
+function formatDuration(secs) {
+  const s = Math.max(0, Math.round(Number(secs) || 0));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return rem === 0 ? `${m}m` : `${m}m ${rem}s`;
 }
 
 function AccordionItem({ index, question: q }) {
@@ -364,6 +561,19 @@ function AccordionItem({ index, question: q }) {
                 <Metric label="Accuracy" value={`${q.accuracy || 0}%`} />
                 <Metric label="Confidence" value={`${q.fused_confidence || 0}%`} />
                 {q.audio_confidence != null && <Metric label="Audio" value={`${q.audio_confidence}%`} />}
+                {(q.time_taken != null || q.time_limit != null) && (
+                  <Metric
+                    label="Time taken"
+                    value={
+                      q.time_limit
+                        ? `${formatDuration(q.time_taken || 0)} / ${formatDuration(q.time_limit)}`
+                        : formatDuration(q.time_taken || 0)
+                    }
+                  />
+                )}
+                {(q.auto_submitted || q.auto_skipped) && (
+                  <Metric label="Submission" value="Auto-submitted (time expired)" highlight />
+                )}
                 {q.new_difficulty && q.new_difficulty !== q.difficulty && (
                   <Metric label="Next level" value={`${q.difficulty} → ${q.new_difficulty}`} highlight />
                 )}

@@ -180,6 +180,10 @@ export default function InterviewSetup() {
       navigate("/profile?focus=resume", { replace: true });
       return;
     }
+    // Note: fullscreen is intentionally NOT requested here. It engages on
+    // the Interview page when the instructions phase ends — either from the
+    // user's Skip click (which is a fresh gesture) or, on auto-advance,
+    // from the first interaction inside the interview UI.
     setIsStarting(true);
     try {
       // Determine a readable technology name for the report history
