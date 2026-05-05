@@ -10,7 +10,7 @@ import {
   Legend,
   ArcElement,
 } from "chart.js";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
 import IntelliLoader from "../components/IntelliLoader";
 import ShareMenu from "../components/ShareMenu";
@@ -83,94 +83,14 @@ export default function Report() {
       // Small delay to let DOM settle
       await new Promise(r => setTimeout(r, 100));
 
-      // 3. Capture
-      // html2canvas 1.4 can't parse modern CSS like color-mix(), oklch(),
-      // lab(), etc. — encountering one throws and aborts the whole capture.
-      // We patch the cloned document via onclone to strip those out before
-      // html2canvas reads computed styles. We don't touch the live DOM so
-      // the on-screen UI keeps its modern colors.
-      // Replace any color-mix()/oklch()/lab()/etc. function calls in the
-      // given string with a fallback color, while correctly skipping over
-      // nested parens (e.g., color-mix(in srgb, rgb(255,0,0) 30%, transparent)).
-      const FUNC_OPEN = /(color-mix|oklch|oklab|lab|lch)\(/i;
-      const replaceColorFns = (input, fallback) => {
-        if (!input || typeof input !== 'string') return input;
-        let result = input;
-        while (true) {
-          const m = result.match(FUNC_OPEN);
-          if (!m) break;
-          const start = m.index;
-          let depth = 1;
-          let i = start + m[0].length;
-          while (i < result.length && depth > 0) {
-            const ch = result[i];
-            if (ch === '(') depth++;
-            else if (ch === ')') depth--;
-            i++;
-          }
-          if (depth !== 0) break; // unbalanced — bail to avoid infinite loop
-          result = result.slice(0, start) + fallback + result.slice(i);
-        }
-        return result;
-      };
-      const containsUnsupported = (s) => typeof s === 'string' && FUNC_OPEN.test(s);
-
-      const stripUnsupportedColors = (root) => {
-        // Inline-style attribute scrub
-        root.querySelectorAll('[style]').forEach((el) => {
-          const s = el.getAttribute('style');
-          if (containsUnsupported(s)) {
-            el.setAttribute('style', replaceColorFns(s, 'transparent'));
-          }
-        });
-        // Walk the cloned document's stylesheets and rewrite any cssText
-        // that contains color-mix / oklch / etc. This catches stylesheet
-        // rules (not just inline styles) so html2canvas never sees them.
-        try {
-          const sheets = root.styleSheets;
-          for (let i = 0; i < sheets.length; i++) {
-            let rules;
-            try { rules = sheets[i].cssRules; } catch (_) { continue; } // CORS-blocked sheet
-            if (!rules) continue;
-            for (let j = 0; j < rules.length; j++) {
-              const rule = rules[j];
-              if (!rule || !rule.style) continue;
-              for (let k = 0; k < rule.style.length; k++) {
-                const prop = rule.style[k];
-                const val = rule.style.getPropertyValue(prop);
-                if (containsUnsupported(val)) {
-                  // Replace problem function with a flat fallback color.
-                  // Borders/box-shadows lose tint but the layout is preserved.
-                  rule.style.setProperty(prop, replaceColorFns(val, 'rgba(148,163,184,0.25)'));
-                }
-              }
-            }
-          }
-        } catch (_) { /* best-effort */ }
-        // Inject explicit overrides for the rules we know about — covers
-        // any stylesheet we couldn't reach (cross-origin) and gives nicer
-        // tints than the generic fallback above.
-        const style = root.ownerDocument.createElement('style');
-        style.textContent = `
-          .completed-badge { border-color: rgba(34, 197, 94, 0.3) !important; }
-          .emotion-swatch { box-shadow: none !important; }
-          .emotion-bar-track { background: rgba(148, 163, 184, 0.22) !important; }
-          .q-diff-easy   { border-color: rgba(16, 185, 129, 0.35) !important; }
-          .q-diff-medium { border-color: rgba(245, 158, 11, 0.35) !important; }
-          .q-diff-hard   { border-color: rgba(239, 68, 68, 0.35) !important; }
-          .q-score-good { background: rgba(16, 185, 129, 0.15) !important; }
-          .q-score-fair { background: rgba(245, 158, 11, 0.15) !important; }
-          .q-score-poor { background: rgba(239, 68, 68, 0.15) !important; }
-        `;
-        root.head?.appendChild(style);
-      };
-
+      // 3. Capture — html2canvas-pro handles modern CSS (color-mix, oklch,
+      // lab, etc.) natively, so no manual stylesheet scrubbing is needed.
       const canvas = await html2canvas(reportRef.current, {
-        scale: 2, useCORS: true,
+        scale: 2,
+        useCORS: true,
         backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim() || '#0a0f1a',
         scrollY: -window.scrollY,
         windowHeight: reportRef.current.scrollHeight,
-        onclone: (clonedDoc) => stripUnsupportedColors(clonedDoc),
         // Don't kill the whole capture if a single image fails to load.
         imageTimeout: 8000,
         logging: false,

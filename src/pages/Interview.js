@@ -6,6 +6,7 @@ import axios from "../api/axiosInstance";
 import { SOCKET_URL } from "../api/config";
 import { useNotification } from "../context/NotificationContext";
 import AIAvatar from "../components/AIAvatar";
+import AudioVisualizer from "../components/AudioVisualizer";
 import "./Interview.css";
 
 export default function Interview() {
@@ -86,6 +87,9 @@ export default function Interview() {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState("");
     const transcriptRef = useRef("");
+    // Mic stream exposed to the AudioVisualizer. Set once getUserMedia
+    // succeeds; lets the visualizer build its own AnalyserNode independently.
+    const [audioStream, setAudioStream] = useState(null);
     const accumulatedFinalRef = useRef(""); // Survives browser auto-stop/restart on pauses
     const [currentDifficulty, setCurrentDifficulty] = useState(difficulty || "Medium");
     const [isEvaluating, setIsEvaluating] = useState(false);
@@ -314,11 +318,15 @@ export default function Interview() {
                 try {
                     const audioTracks = stream.getAudioTracks();
                     if (audioTracks.length > 0) {
-                        const audioStream = new MediaStream(audioTracks);
+                        const recorderStream = new MediaStream(audioTracks);
+                        // Expose the audio-only stream to the visualizer so its
+                        // AnalyserNode can tap the same mic without conflicting
+                        // with the MediaRecorder.
+                        setAudioStream(recorderStream);
                         const audioMime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', '']
                             .find(type => !type || MediaRecorder.isTypeSupported(type));
                         const opts = audioMime ? { mimeType: audioMime } : {};
-                        mediaRecorderRef.current = new MediaRecorder(audioStream, opts);
+                        mediaRecorderRef.current = new MediaRecorder(recorderStream, opts);
                         mediaRecorderRef.current.ondataavailable = (event) => {
                             if (event.data.size > 0 && socketRef.current) {
                                 socketRef.current.emit("audio_chunk", event.data);
@@ -1128,15 +1136,23 @@ export default function Interview() {
                         )}
                     </div>
 
-                    {/* Transcript Area */}
+                    {/* Audio Spectrogram — shows live mic activity instead of
+                        the raw transcript. The transcript is still being
+                        captured silently and used for evaluation; the user
+                        just doesn't see it, which lets them focus on the
+                        question rather than worrying about transcription. */}
                     <div className="transcript-card">
                         <div className="transcript-header">
-                            <span className="transcript-label">Your Answer</span>
+                            <span className="transcript-label">
+                                {isListening ? "Listening to your answer" : canRecord ? "Ready to record" : "Wait for the question"}
+                            </span>
                             {isListening && <span className="recording-indicator">Recording</span>}
                         </div>
-                        <div className="transcript-body">
-                            {transcript || (isListening ? "Listening... start speaking" : canRecord ? "Click Record to begin your answer" : "Wait for the question to be read...")}
-                        </div>
+                        <AudioVisualizer
+                            stream={audioStream}
+                            listening={isListening}
+                            canRecord={canRecord}
+                        />
                     </div>
                 </div>
 
