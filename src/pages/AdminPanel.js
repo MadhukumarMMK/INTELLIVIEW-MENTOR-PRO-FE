@@ -856,6 +856,7 @@ export default function AdminPanel() {
                                                 min={1} defaultValue={6}
                                             />
                                         </section>
+
                                     </div>
 
                                     <div className="limits-save-bar">

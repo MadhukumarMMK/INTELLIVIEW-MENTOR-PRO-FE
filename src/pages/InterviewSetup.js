@@ -180,10 +180,32 @@ export default function InterviewSetup() {
       navigate("/profile?focus=resume", { replace: true });
       return;
     }
-    // Note: fullscreen is intentionally NOT requested here. It engages on
-    // the Interview page when the instructions phase ends — either from the
-    // user's Skip click (which is a fresh gesture) or, on auto-advance,
-    // from the first interaction inside the interview UI.
+    // Engage fullscreen RIGHT NOW — synchronously inside the click handler —
+    // so the browser registers a real user gesture. Fullscreen state carries
+    // across same-origin navigation, so by the time the user reaches the
+    // interview page (after the API call + navigate below) they're already
+    // in fullscreen. This is the only reliable path: requestFullscreen()
+    // can't be triggered programmatically once the gesture is gone, so an
+    // auto-advancing instructions timer alone can never enter fullscreen.
+    if (!document.fullscreenElement) {
+      const root = document.documentElement;
+      const req = root.requestFullscreen
+        || root.webkitRequestFullscreen
+        || root.mozRequestFullScreen
+        || root.msRequestFullscreen;
+      if (req) {
+        try {
+          const fsPromise = req.call(root);
+          if (fsPromise && typeof fsPromise.then === 'function') {
+            fsPromise
+              .then(() => {
+                try { const _p = navigator.keyboard?.lock?.(['Escape', 'F11']); _p?.catch?.(() => {}); } catch (_) {}
+              })
+              .catch(() => {});
+          }
+        } catch (_) {}
+      }
+    }
     setIsStarting(true);
     try {
       // Determine a readable technology name for the report history
@@ -203,7 +225,7 @@ export default function InterviewSetup() {
         technology_name: techName,
         level: difficulty,
         mode: baseMode,
-        questions_count: 3 
+        questions_count: 3
       });
 
       const interviewId = res.data.data._id;

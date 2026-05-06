@@ -411,6 +411,7 @@ export default function Interview() {
         setTimeRemaining(timeLimit);
     }, [currentIdx, timeLimit]);
 
+
     // --- 4b. Tab Switch Proctoring (Anti-Cheat) ---
     // First switch = warning. Second switch = auto-end interview.
     const tabSwitchCountRef = useRef(0);
@@ -430,14 +431,15 @@ export default function Interview() {
     const endingInterviewRef = useRef(false); // suppress termination during clean exit
 
     // When the interview phase begins, engage fullscreen + lock Esc/F11.
-    //   - If we got here from the Skip-button click, requestFullscreenSafe
-    //     was already called inside that gesture; fullscreen is already
-    //     active and we just (re-)lock the keyboard.
-    //   - If we got here from the 20s auto-advance, there is no user gesture
-    //     available right now. We can't programmatically force fullscreen.
-    //     Instead we attach a one-shot capture-phase listener: the user's
-    //     very first interaction with the interview UI (clicking Record,
-    //     anywhere on the page, any key) silently engages fullscreen + lock.
+    //   - Normal flow: fullscreen was engaged on the InterviewSetup page's
+    //     "Start Interview" click and carried across the same-origin nav,
+    //     so by the time we reach this effect we're already in fullscreen
+    //     (whether the user clicked Skip or waited for auto-advance).
+    //   - Fallback: if the user landed here via refresh / direct URL / hot
+    //     reload, fullscreen isn't active and we can't programmatically
+    //     force it. We attach a one-shot capture-phase listener so the very
+    //     first interaction (click anywhere, any keypress) silently engages
+    //     fullscreen + lock.
     useEffect(() => {
         if (showInstructions) return;
 
@@ -1074,6 +1076,7 @@ export default function Interview() {
                     <span className="tab-warning-count">Warnings: {tabSwitchCountRef.current}/2</span>
                 </div>
             )}
+
 
             {/* ===== TOP BAR ===== */}
             <div className="arena-header">

@@ -162,6 +162,7 @@ export default function Report() {
     fetchReport();
   }, [id]);
 
+
   if (loading) return <IntelliLoader message="Loading report" size="fullscreen" />;
   if (!data) return <div className="error-container">Report not found.</div>;
 
