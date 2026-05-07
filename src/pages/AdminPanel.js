@@ -186,14 +186,36 @@ export default function AdminPanel() {
     // to also click "Save All Settings". Other settings (numeric steppers,
     // dropdowns) still save via the bottom bar; only this one boolean is
     // instant-save because it has live consequences for visitors.
+    //
+    // Send ONLY the changed field (not the full settings object) so we can't
+    // accidentally clobber other fields with stale closure values. After the
+    // save we re-fetch and verify — if the server didn't actually persist the
+    // change (e.g. older backend deployment without the expo_mode handler),
+    // the toggle reverts to the real server state and an explicit error tells
+    // the admin what's wrong.
     const handleExpoToggle = async (checked) => {
         const prev = settings.expo_mode;
         setSettings(s => ({ ...s, expo_mode: checked })); // optimistic flip
         try {
-            await axios.put('/admin/settings', { ...settings, expo_mode: checked });
-            notify.success(checked ? "Expo Mode is now ON." : "Expo Mode is now OFF.");
-        } catch {
-            // Revert on failure so the UI reflects the actual server state
+            await axios.put('/admin/settings', { expo_mode: checked });
+            // Verify the change actually landed on the server
+            const verify = await axios.get('/admin/settings');
+            const serverValue = !!verify.data?.expo_mode;
+            if (serverValue !== checked) {
+                // Server returned 200 but the field wasn't honoured — almost
+                // always means the backend deployment is older than this UI.
+                setSettings(s => ({ ...s, ...verify.data }));
+                notify.error(
+                    "Expo Mode didn't persist on the server. The backend may be running an older build — redeploy /backend and try again."
+                );
+                return;
+            }
+            // Save confirmed — sync the rest of the settings too in case
+            // anything else changed concurrently.
+            setSettings(s => ({ ...s, ...verify.data }));
+            notify.success(`Expo Mode is now ${checked ? 'ON' : 'OFF'}.`);
+        } catch (err) {
+            console.error('Expo Mode save failed:', err);
             setSettings(s => ({ ...s, expo_mode: prev }));
             notify.error("Couldn't update Expo Mode. Please try again.");
         }
