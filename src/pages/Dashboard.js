@@ -40,6 +40,10 @@ export default function Dashboard() {
     confidenceAvg: 0
   });
   const [maxSlots, setMaxSlots] = useState(6);
+  // Expo Mode flag + leaderboard preview shown only when expo mode is on.
+  // Polls every 15s so it stays in sync with new completions during the expo.
+  const [expoMode, setExpoMode] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -47,6 +51,7 @@ export default function Dashboard() {
         try {
           const settingsRes = await axios.get("/admin/settings");
           if (settingsRes.data?.max_interviews) setMaxSlots(settingsRes.data.max_interviews);
+          setExpoMode(!!settingsRes.data?.expo_mode);
         } catch (_) {}
 
         const res = await axios.get(`/interviews/history/${user.roll_no}`);
@@ -79,6 +84,25 @@ export default function Dashboard() {
     if (user.roll_no) fetchDashboardData();
     else setLoading(false);
   }, [user.roll_no]);
+
+  // Expo Mode leaderboard: pull top scorers + auto-refresh every 15s while
+  // the dashboard is open. Skipped entirely when expo mode is off.
+  useEffect(() => {
+    if (!expoMode) return;
+    let alive = true;
+    const fetchBoard = async () => {
+      try {
+        const res = await axios.get("/admin/leaderboard?limit=8");
+        if (!alive) return;
+        setLeaderboard(res.data?.leaderboard || []);
+      } catch (err) {
+        console.error("Leaderboard fetch error:", err);
+      }
+    };
+    fetchBoard();
+    const t = setInterval(fetchBoard, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, [expoMode]);
 
   // ── Derived widgets: Strongest Skills (top 3 avg score per tech) ──
   const strongestSkills = useMemo(() => {
@@ -247,6 +271,50 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Expo Mode leaderboard preview — top 8 scorers ranked by combined
+          accuracy + confidence. Polls every 15s. Hidden when expo_mode is off. */}
+      {expoMode && (
+        <section className="dash-leaderboard">
+          <div className="dash-lb-head">
+            <div>
+              <div className="dash-lb-eyebrow">
+                <span className="dash-lb-live-dot" />
+                Live · Expo Leaderboard
+              </div>
+              <h2 className="dash-lb-title">Top Scorers</h2>
+            </div>
+            <button className="dash-lb-cta" onClick={() => navigate('/leaderboard')}>
+              Open full board
+            </button>
+          </div>
+
+          {leaderboard.length === 0 ? (
+            <div className="dash-lb-empty">No interviews on the board yet — be the first.</div>
+          ) : (
+            <ol className="dash-lb-list">
+              {leaderboard.map((r, i) => {
+                const acc = Math.round(r.overall_score || 0);
+                const conf = Math.round(r.avg_confidence || 0);
+                const combined = Math.round(r.combined_score || 0);
+                return (
+                  <li key={r._id} className={`dash-lb-row ${i === 0 ? 'is-top' : ''}`}>
+                    <span className="dash-lb-rank">#{i + 1}</span>
+                    <span className="dash-lb-name">{r.candidate_name || 'Anonymous'}</span>
+                    <span className="dash-lb-tech">{r.technology_name || 'Interview'}</span>
+                    <span className="dash-lb-metrics">
+                      <span>Acc {acc}%</span>
+                      <span className="dash-lb-sep">·</span>
+                      <span>Conf {conf}%</span>
+                    </span>
+                    <span className="dash-lb-score">{combined}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </section>
+      )}
 
       {loading ? (
         // Skeleton layout that mirrors the real analytics grid — gives users

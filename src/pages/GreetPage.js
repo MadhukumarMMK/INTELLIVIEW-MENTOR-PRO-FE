@@ -254,57 +254,40 @@ export default function GreetPage() {
         });
     };
 
+    // Phase-driven status text — the only thing that changes between phases.
+    // Layout, logo, and heading stay constant for a unified visual.
+    const statusText =
+        phase === 'speaking' ? "IntelliView is greeting you…"
+      : phase === 'listening' ? "Listening — please say your name"
+      : "Please confirm or edit your name below.";
+
     return (
         <div className="greet-page">
-            <div className="greet-card">
-                {/* Branded intro shown ONLY while the AI welcomes the visitor.
-                    Once we transition to listening / ready, the compact
-                    eyebrow + name prompt take over. */}
-                {phase === 'speaking' ? (
-                    <div className="greet-brand-intro" aria-live="polite">
-                        <div className="greet-brand-rings" aria-hidden="true">
-                            <span className="greet-brand-ring greet-brand-ring-1" />
-                            <span className="greet-brand-ring greet-brand-ring-2" />
-                            <span className="greet-brand-ring greet-brand-ring-3" />
-                            <div className="greet-brand-mark">IV</div>
-                        </div>
-                        <div className="greet-brand-wordmark">IntelliView</div>
-                        <div className="greet-brand-tag">Welcome</div>
-                    </div>
-                ) : (
-                    <>
-                        <div className="greet-eyebrow">IntelliView</div>
-                        <h1 className="greet-prompt">Welcome.</h1>
-                        <p className="greet-subtitle">May we know your name?</p>
-                    </>
-                )}
-
-                <div className="greet-stage">
-                    {phase === 'listening' && (
-                        <>
-                            <div className="greet-rings" aria-hidden="true">
-                                <span className="greet-ring greet-ring-1" />
-                                <span className="greet-ring greet-ring-2" />
-                                <span className="greet-ring greet-ring-3" />
-                                <span className="greet-mic-dot" />
-                            </div>
-                            <div className="greet-listening-label">Listening — please say your name</div>
-                            <button
-                                type="button"
-                                className="greet-link-btn"
-                                onClick={stopListeningAndType}
-                            >
-                                I'll type instead
-                            </button>
-                        </>
-                    )}
-
-                    {phase === 'ready' && (
-                        <div className="greet-ready-hint">
-                            Please confirm or edit your name below.
-                        </div>
-                    )}
+            <div className={`greet-card greet-${phase}`}>
+                {/* The IV application logo IS the listening indicator. Rings
+                    pulse around it during 'speaking' and 'listening', then
+                    settle still during 'ready'. Same logo throughout — no
+                    layout shift between phases. */}
+                <div className="greet-logo-stage" aria-hidden="true">
+                    <span className="greet-logo-ring greet-logo-ring-1" />
+                    <span className="greet-logo-ring greet-logo-ring-2" />
+                    <span className="greet-logo-ring greet-logo-ring-3" />
+                    <div className="greet-logo-mark">IV</div>
                 </div>
+
+                <div className="greet-wordmark">IntelliView</div>
+                <h1 className="greet-prompt">Welcome.</h1>
+                <p className="greet-subtitle" aria-live="polite">{statusText}</p>
+
+                {phase === 'listening' && (
+                    <button
+                        type="button"
+                        className="greet-link-btn"
+                        onClick={stopListeningAndType}
+                    >
+                        I'll type instead
+                    </button>
+                )}
 
                 <div className="greet-input-wrap">
                     <label className="greet-input-label" htmlFor="greet-name">Your name</label>

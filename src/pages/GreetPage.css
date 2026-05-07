@@ -12,14 +12,14 @@
 
 .greet-card {
   width: 100%;
-  max-width: 560px;
+  max-width: 540px;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 22px;
-  padding: 2.5rem 2.25rem 2.25rem;
+  padding: 2.5rem 2.25rem 2rem;
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.35);
   text-align: center;
-  animation: greet-rise 0.4s ease-out;
+  animation: greet-rise 0.45s ease-out;
 }
 
 @keyframes greet-rise {
@@ -27,14 +27,82 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.greet-eyebrow {
-  font-size: 0.72rem;
+/* ====== Logo stage — central anchor, present in every phase ====== */
+.greet-logo-stage {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.greet-logo-mark {
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 65%, #8b5cf6));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  box-shadow:
+    0 14px 40px -8px color-mix(in srgb, var(--primary) 70%, transparent),
+    inset 0 2px 6px rgba(255, 255, 255, 0.25);
+  z-index: 2;
+  animation: greet-logo-bob 2.6s ease-in-out infinite;
+}
+@keyframes greet-logo-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+/* Ring animation pauses in 'ready' phase to signal "done listening" */
+.greet-logo-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  opacity: 0;
+  animation: greet-logo-ring 2.4s ease-out infinite;
+}
+.greet-logo-ring-1 { animation-delay: 0s; }
+.greet-logo-ring-2 { animation-delay: 0.8s; }
+.greet-logo-ring-3 { animation-delay: 1.6s; }
+
+@keyframes greet-logo-ring {
+  0%   { transform: scale(0.6);  opacity: 0.85; }
+  100% { transform: scale(1.7);  opacity: 0;    }
+}
+
+/* In 'ready' phase the rings calm down — single static glow, no pulses */
+.greet-card.greet-ready .greet-logo-ring { animation: none; opacity: 0; }
+.greet-card.greet-ready .greet-logo-mark { animation: none; }
+.greet-card.greet-ready .greet-logo-stage::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+/* In 'listening' phase, slightly sharper rings to feel "active" */
+.greet-card.greet-listening .greet-logo-ring {
+  border-color: color-mix(in srgb, var(--primary) 75%, transparent);
+}
+
+/* ====== Wordmark + Heading + Subtitle (constant layout) ====== */
+.greet-wordmark {
+  font-size: 1.05rem;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--primary);
-  margin-bottom: 0.6rem;
-  animation: greet-content-fade 0.35s ease-out;
+  margin-bottom: 0.5rem;
 }
 
 .greet-prompt {
@@ -44,139 +112,20 @@
   letter-spacing: -0.025em;
   color: var(--text-primary);
   line-height: 1.05;
-  animation: greet-content-fade 0.35s ease-out 0.05s backwards;
 }
 
 .greet-subtitle {
-  margin: 0 0 1.5rem;
-  font-size: 1rem;
+  margin: 0 auto 1.5rem;
+  max-width: 360px;
+  font-size: 0.98rem;
   color: var(--text-muted);
   font-weight: 500;
-  animation: greet-content-fade 0.35s ease-out 0.1s backwards;
+  min-height: 1.4em; /* avoid layout shifts when text length changes */
+  transition: color 0.25s ease;
 }
+.greet-card.greet-listening .greet-subtitle { color: var(--primary); font-weight: 600; }
 
-@keyframes greet-content-fade {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ---- Stage with mic rings while listening ---- */
-.greet-stage {
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.875rem;
-  margin-bottom: 1.25rem;
-}
-
-.greet-status {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-  font-style: italic;
-}
-
-.greet-listening-label {
-  color: var(--primary);
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.greet-ready-hint {
-  color: var(--text-muted);
-  font-size: 0.92rem;
-  font-weight: 500;
-}
-
-/* ---- IntelliView branded intro (shown while AI speaks the welcome) ---- */
-.greet-brand-intro {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-  padding: 1.5rem 0 0.5rem;
-  animation: greet-brand-fade 0.5s ease-out;
-}
-@keyframes greet-brand-fade {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-/* Concentric pulsing rings around the IV monogram */
-.greet-brand-rings {
-  position: relative;
-  width: 130px;
-  height: 130px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.greet-brand-mark {
-  width: 80px;
-  height: 80px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, #8b5cf6));
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.25rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  box-shadow:
-    0 12px 40px -8px color-mix(in srgb, var(--primary) 70%, transparent),
-    inset 0 2px 6px rgba(255, 255, 255, 0.25);
-  z-index: 2;
-  animation: greet-brand-mark-bob 2.4s ease-in-out infinite;
-}
-@keyframes greet-brand-mark-bob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-3px); }
-}
-.greet-brand-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
-  opacity: 0;
-  animation: greet-brand-ring 2.4s ease-out infinite;
-}
-.greet-brand-ring-1 { animation-delay: 0s; }
-.greet-brand-ring-2 { animation-delay: 0.8s; }
-.greet-brand-ring-3 { animation-delay: 1.6s; }
-@keyframes greet-brand-ring {
-  0%   { transform: scale(0.55); opacity: 0.85; }
-  100% { transform: scale(1.6);  opacity: 0;    }
-}
-
-/* Wordmark — fades in letter-by-letter */
-.greet-brand-wordmark {
-  font-size: 2rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  background: linear-gradient(180deg,
-    var(--text-primary) 0%,
-    color-mix(in srgb, var(--primary) 50%, var(--text-primary)) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: 0 4px 24px color-mix(in srgb, var(--primary) 25%, transparent);
-}
-
-.greet-brand-tag {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--primary);
-  padding: 4px 14px;
-  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
-}
-
+/* ====== "I'll type instead" link (only in listening phase) ====== */
 .greet-link-btn {
   background: none;
   border: none;
@@ -186,43 +135,11 @@
   text-decoration: underline;
   font-family: inherit;
   padding: 4px 10px;
+  margin-bottom: 1rem;
 }
 .greet-link-btn:hover { color: var(--text-primary); }
 
-.greet-rings {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.greet-mic-dot {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 6px 22px color-mix(in srgb, var(--primary) 50%, transparent);
-  z-index: 2;
-}
-.greet-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
-  opacity: 0;
-  animation: greet-ring-pulse 1.9s ease-out infinite;
-}
-.greet-ring-1 { animation-delay: 0s; }
-.greet-ring-2 { animation-delay: 0.6s; }
-.greet-ring-3 { animation-delay: 1.2s; }
-
-@keyframes greet-ring-pulse {
-  0%   { transform: scale(0.55); opacity: 0.95; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
-
-/* ---- Editable input ---- */
+/* ====== Editable input ====== */
 .greet-input-wrap {
   text-align: left;
   margin-bottom: 1.25rem;
@@ -247,19 +164,15 @@
   border-radius: 12px;
   font-family: inherit;
   letter-spacing: 0.005em;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .greet-input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
 }
-.greet-input:disabled {
-  background: var(--bg-surface-hover);
-  color: var(--text-muted);
-}
 
-/* ---- Action buttons ---- */
+/* ====== Action buttons ====== */
 .greet-actions {
   display: flex;
   gap: 0.75rem;
@@ -303,8 +216,8 @@
 .greet-btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
 
 @media (max-width: 600px) {
-  .greet-card { padding: 2.25rem 1.5rem 1.75rem; }
-  .greet-prompt { font-size: 1.5rem; }
-  .greet-rings { width: 100px; height: 100px; }
-  .greet-mic-dot { width: 54px; height: 54px; }
+  .greet-card { padding: 2rem 1.25rem 1.5rem; }
+  .greet-prompt { font-size: 1.7rem; }
+  .greet-logo-stage { width: 110px; height: 110px; }
+  .greet-logo-mark { width: 72px; height: 72px; font-size: 2rem; border-radius: 18px; }
 }
