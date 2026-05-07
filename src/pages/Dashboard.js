@@ -85,24 +85,33 @@ export default function Dashboard() {
     else setLoading(false);
   }, [user.roll_no]);
 
-  // Expo Mode leaderboard: pull top scorers + auto-refresh every 15s while
-  // the dashboard is open. Skipped entirely when expo mode is off.
+  // Live re-poll for both Expo Mode flag AND the leaderboard. Runs every 8s
+  // so admin toggle changes take effect on the dashboard within 8 seconds —
+  // no page refresh needed. Polling continues regardless of expoMode so we
+  // pick up flips from OFF → ON; the leaderboard fetch itself is skipped
+  // when expo mode is off to save a request.
   useEffect(() => {
-    if (!expoMode) return;
     let alive = true;
-    const fetchBoard = async () => {
+    const refresh = async () => {
       try {
-        const res = await axios.get("/admin/leaderboard?limit=8");
+        const settingsRes = await axios.get("/admin/settings");
         if (!alive) return;
-        setLeaderboard(res.data?.leaderboard || []);
+        const isExpo = !!settingsRes.data?.expo_mode;
+        setExpoMode(isExpo);
+        if (isExpo) {
+          const boardRes = await axios.get("/admin/leaderboard?limit=8");
+          if (!alive) return;
+          setLeaderboard(boardRes.data?.leaderboard || []);
+        } else {
+          setLeaderboard([]);
+        }
       } catch (err) {
-        console.error("Leaderboard fetch error:", err);
+        console.error("Dashboard expo-poll error:", err);
       }
     };
-    fetchBoard();
-    const t = setInterval(fetchBoard, 15000);
+    const t = setInterval(refresh, 8000);
     return () => { alive = false; clearInterval(t); };
-  }, [expoMode]);
+  }, []);
 
   // ── Derived widgets: Strongest Skills (top 3 avg score per tech) ──
   const strongestSkills = useMemo(() => {

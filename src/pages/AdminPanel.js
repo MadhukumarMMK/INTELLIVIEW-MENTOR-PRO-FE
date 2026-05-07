@@ -182,6 +182,23 @@ export default function AdminPanel() {
         catch { notify.error("Failed to update settings."); }
     };
 
+    // Auto-save the Expo Mode toggle the moment the admin flips it — no need
+    // to also click "Save All Settings". Other settings (numeric steppers,
+    // dropdowns) still save via the bottom bar; only this one boolean is
+    // instant-save because it has live consequences for visitors.
+    const handleExpoToggle = async (checked) => {
+        const prev = settings.expo_mode;
+        setSettings(s => ({ ...s, expo_mode: checked })); // optimistic flip
+        try {
+            await axios.put('/admin/settings', { ...settings, expo_mode: checked });
+            notify.success(checked ? "Expo Mode is now ON." : "Expo Mode is now OFF.");
+        } catch {
+            // Revert on failure so the UI reflects the actual server state
+            setSettings(s => ({ ...s, expo_mode: prev }));
+            notify.error("Couldn't update Expo Mode. Please try again.");
+        }
+    };
+
     const handleCancelSettings = async () => {
         try {
             const res = await axios.get('/admin/settings');
@@ -881,7 +898,7 @@ export default function AdminPanel() {
                                                     <input
                                                         type="checkbox"
                                                         checked={!!settings.expo_mode}
-                                                        onChange={e => setSettings({ ...settings, expo_mode: e.target.checked })}
+                                                        onChange={e => handleExpoToggle(e.target.checked)}
                                                     />
                                                     <span className="expo-toggle-track" aria-hidden="true">
                                                         <span className="expo-toggle-thumb" />

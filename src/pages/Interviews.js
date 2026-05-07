@@ -32,6 +32,20 @@ export default function Interviews() {
     if (user.roll_no) fetchSlotInfo();
   }, [user.roll_no]);
 
+  // Live re-poll the expo_mode flag every 8s so admin toggle changes
+  // take effect on this page without a refresh. Cheap — single GET.
+  useEffect(() => {
+    let alive = true;
+    const t = setInterval(async () => {
+      try {
+        const s = await axios.get("/admin/settings");
+        if (!alive) return;
+        setExpoMode(!!s.data?.expo_mode);
+      } catch (_) { /* ignore */ }
+    }, 8000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+
   const handleStartInterview = async (mode) => {
     if (activeInterviewsCount >= maxSlots) {
       notify.confirm(
