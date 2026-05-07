@@ -11,6 +11,9 @@ export default function InterviewSetup() {
   const navigate = useNavigate();
   const notify = useNotification();
   const baseMode = location.state?.mode || "resume";
+  // Carries forward from the GreetPage when expo mode is on. Empty string
+  // for real-user flows.
+  const candidateName = (location.state?.candidateName || "").trim();
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -99,8 +102,18 @@ export default function InterviewSetup() {
 
     const initHardware = async () => {
       try {
+        // Chrome / Firefox / Safari deliberately make navigator.mediaDevices
+        // unavailable on insecure origins. If we hit that, the cause is
+        // 99% "served over HTTP from a non-localhost origin" — surface the
+        // exact reason so it's debuggable from the UI alone.
+        if (!window.isSecureContext) {
+          throw new Error(
+            "Camera/mic blocked: this page is on an insecure origin. " +
+            "Use HTTPS, or for kiosk testing add this URL to chrome://flags/#unsafely-treat-insecure-origin-as-secure."
+          );
+        }
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error("Media devices not supported. Please use a modern browser and ensure you are on HTTPS.");
+          throw new Error("Media devices not supported. Please use a recent Chrome, Edge, or Firefox.");
         }
 
         const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -225,7 +238,8 @@ export default function InterviewSetup() {
         technology_name: techName,
         level: difficulty,
         mode: baseMode,
-        questions_count: 3
+        questions_count: 3,
+        candidate_name: candidateName  // forwarded from GreetPage in expo mode
       });
 
       const interviewId = res.data.data._id;
@@ -247,7 +261,8 @@ export default function InterviewSetup() {
           moduleName,
           topic: selectedTopic,
           topicName,
-          interviewId
+          interviewId,
+          candidateName                       // forwarded for the formal Q1 greeting
         }
       });
     } catch (err) {

@@ -43,7 +43,8 @@ export default function AdminPanel() {
         max_interviews: 6, questions_per_session: 3,
         questions_resume: 10, questions_custom: 10, questions_hr: 8,
         time_per_question_resume: 60, time_per_question_custom: 60, time_per_question_hr: 60,
-        session_time_limit: 15, starting_difficulty: 'Medium'
+        session_time_limit: 15, starting_difficulty: 'Medium',
+        expo_mode: false
     });
     const [loading, setLoading] = useState(false);
 
@@ -857,6 +858,37 @@ export default function AdminPanel() {
                                             />
                                         </section>
 
+                                        {/* Expo Mode toggle — voice-greeted name capture + leaderboard */}
+                                        <section
+                                            className={`a-card limits-section expo-section ${settings.expo_mode ? 'expo-on' : ''}`}
+                                            style={{ gridColumn: '1 / -1' }}
+                                        >
+                                            <header className="limits-section-head">
+                                                <span className="limits-section-icon"><Lock size={18} strokeWidth={2} /></span>
+                                                <div style={{ flex: 1 }}>
+                                                    <h3>
+                                                        Expo Mode
+                                                        {settings.expo_mode && <span className="expo-on-pill">ACTIVE</span>}
+                                                    </h3>
+                                                    <p>
+                                                        When ON: clicking Start Interview routes to a voice-led name
+                                                        capture, the AI greets the visitor formally on the first question,
+                                                        and the leaderboard at /leaderboard tracks top scorers ranked by
+                                                        accuracy + confidence. Real-user behaviour is fully preserved when OFF.
+                                                    </p>
+                                                </div>
+                                                <label className="expo-toggle">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!settings.expo_mode}
+                                                        onChange={e => setSettings({ ...settings, expo_mode: e.target.checked })}
+                                                    />
+                                                    <span className="expo-toggle-track" aria-hidden="true">
+                                                        <span className="expo-toggle-thumb" />
+                                                    </span>
+                                                </label>
+                                            </header>
+                                        </section>
                                     </div>
 
                                     <div className="limits-save-bar">

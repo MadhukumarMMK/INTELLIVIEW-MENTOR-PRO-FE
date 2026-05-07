@@ -5,6 +5,8 @@ import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Splash from "./components/Splash"; // <-- Import the Splash Screen
 import InterviewSetup from "./pages/InterviewSetup";
+import GreetPage from "./pages/GreetPage";
+import Leaderboard from "./pages/Leaderboard";
 // Pages
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding"; // <-- Import the new Onboarding Page
@@ -44,6 +46,8 @@ function App() {
             <Route path="/report/:id" element={<ProtectedRoute><Report /></ProtectedRoute>} />
             <Route path="/myreports" element={<ProtectedRoute><MyReports /></ProtectedRoute>} />
             <Route path="/interview-setup" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
+            <Route path="/interview/greet" element={<ProtectedRoute><GreetPage /></ProtectedRoute>} />
+            <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/interview/active" element={<ProtectedRoute><Interview /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/digilocker" element={<ProtectedRoute><DigiLocker /></ProtectedRoute>} />

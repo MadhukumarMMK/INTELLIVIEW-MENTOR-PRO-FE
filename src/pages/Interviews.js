@@ -11,6 +11,7 @@ export default function Interviews() {
   const [user] = useState(JSON.parse(localStorage.getItem("user") || "{}"));
   const [activeInterviewsCount, setActiveInterviewsCount] = useState(0);
   const [maxSlots, setMaxSlots] = useState(6);
+  const [expoMode, setExpoMode] = useState(false);
 
   useEffect(() => {
     const fetchSlotInfo = async () => {
@@ -18,6 +19,7 @@ export default function Interviews() {
         try {
           const s = await axios.get("/admin/settings");
           if (s.data?.max_interviews) setMaxSlots(s.data.max_interviews);
+          setExpoMode(!!s.data?.expo_mode);
         } catch (_) {}
 
         const res = await axios.get(`/interviews/history/${user.roll_no}`);
@@ -49,6 +51,13 @@ export default function Interviews() {
         navigate("/profile?focus=resume");
         return;
       }
+    }
+
+    // Expo Mode: route through the voice-led name capture page first.
+    // Real-user mode skips this and goes straight to setup.
+    if (expoMode) {
+      navigate("/interview/greet", { state: { mode } });
+      return;
     }
 
     navigate("/interview-setup", { state: { mode } });

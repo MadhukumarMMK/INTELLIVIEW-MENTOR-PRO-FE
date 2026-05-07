@@ -158,7 +158,10 @@ export default function Profile() {
         }
         notify.warning(data.message || "Some profile fields couldn't be updated.");
       } else if (status === 503) {
-        notify.error("Resume parser is offline. Please try again in a moment.");
+        // Backend now sends a specific reason (service down / timeout /
+        // unsupported PDF / parser crash). Surface that directly so the
+        // user knows what to do.
+        notify.error(data.message || "Resume parser is offline. Please try again in a moment.");
       } else {
         notify.error(data.message || "Failed to upload resume");
       }

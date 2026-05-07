@@ -1,0 +1,172 @@
+.greet-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--primary) 14%, transparent) 0%, transparent 70%),
+    var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.greet-card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 22px;
+  padding: 2.75rem 2.25rem 2.25rem;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.35);
+  text-align: center;
+  animation: greet-rise 0.4s ease-out;
+}
+
+@keyframes greet-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.greet-prompt {
+  margin: 0 0 1.5rem;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+/* ---- Stage with mic rings while listening ---- */
+.greet-stage {
+  min-height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.greet-status {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+.greet-rings {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.greet-mic-dot {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--primary) 50%, transparent);
+  z-index: 2;
+}
+.greet-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  opacity: 0;
+  animation: greet-ring-pulse 1.9s ease-out infinite;
+}
+.greet-ring-1 { animation-delay: 0s; }
+.greet-ring-2 { animation-delay: 0.6s; }
+.greet-ring-3 { animation-delay: 1.2s; }
+
+@keyframes greet-ring-pulse {
+  0%   { transform: scale(0.55); opacity: 0.95; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ---- Editable input ---- */
+.greet-input-wrap {
+  text-align: left;
+  margin-bottom: 1.25rem;
+}
+.greet-input-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.greet-input {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  font-family: inherit;
+  letter-spacing: 0.005em;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.greet-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+.greet-input:disabled {
+  background: var(--bg-surface-hover);
+  color: var(--text-muted);
+}
+
+/* ---- Action buttons ---- */
+.greet-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.greet-btn {
+  padding: 12px 22px;
+  border-radius: 11px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+.greet-btn-primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--primary) 50%, transparent);
+}
+.greet-btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+.greet-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.greet-btn-secondary {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.greet-btn-secondary:hover:not(:disabled) {
+  border-color: var(--text-muted);
+}
+.greet-btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 600px) {
+  .greet-card { padding: 2.25rem 1.5rem 1.75rem; }
+  .greet-prompt { font-size: 1.5rem; }
+  .greet-rings { width: 100px; height: 100px; }
+  .greet-mic-dot { width: 54px; height: 54px; }
+}

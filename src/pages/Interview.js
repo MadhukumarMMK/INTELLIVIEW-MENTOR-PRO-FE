@@ -20,7 +20,7 @@ export default function Interview() {
     const streamRef = useRef(null); // Store stream directly for reliable cleanup
 
     const notify = useNotification();
-    const { baseMode, difficulty, technology, technologyName, module, moduleName, topic, topicName, interviewId } = location.state || {};
+    const { baseMode, difficulty, technology, technologyName, module, moduleName, topic, topicName, interviewId, candidateName } = location.state || {};
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     // --- Instructions Screen ---
@@ -809,12 +809,19 @@ export default function Interview() {
     useEffect(() => {
         if (showInstructions) return;
         if (questions[currentIdx] && !loading) {
-            const textToSpeak = typeof questions[currentIdx] === 'object'
+            const rawText = typeof questions[currentIdx] === 'object'
                 ? questions[currentIdx].question
                 : questions[currentIdx];
+            // Expo mode: open the very first question with a formal greeting
+            // by name. Subsequent questions read normally so we don't repeat.
+            const isFirstQuestion = currentIdx === 0;
+            const trimmedName = (candidateName || "").trim();
+            const textToSpeak = (isFirstQuestion && trimmedName)
+                ? `Good day, ${trimmedName}. Welcome to your IntelliView interview. Let us begin with the first question. ${rawText}`
+                : rawText;
             speak(textToSpeak);
         }
-    }, [questions, currentIdx, loading, speak, showInstructions]);
+    }, [questions, currentIdx, loading, speak, showInstructions, candidateName]);
 
     // --- Kill all media — guaranteed camera/mic release ---
     const killAllMedia = useCallback(() => {
