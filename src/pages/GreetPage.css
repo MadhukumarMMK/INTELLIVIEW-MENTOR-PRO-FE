@@ -16,7 +16,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 22px;
-  padding: 2.75rem 2.25rem 2.25rem;
+  padding: 2.5rem 2.25rem 2.25rem;
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.35);
   text-align: center;
   animation: greet-rise 0.4s ease-out;
@@ -27,21 +27,47 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.greet-prompt {
-  margin: 0 0 1.5rem;
-  font-size: 1.85rem;
+.greet-eyebrow {
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 0.6rem;
+  animation: greet-content-fade 0.35s ease-out;
+}
+
+.greet-prompt {
+  margin: 0 0 0.4rem;
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
   color: var(--text-primary);
-  line-height: 1.2;
+  line-height: 1.05;
+  animation: greet-content-fade 0.35s ease-out 0.05s backwards;
+}
+
+.greet-subtitle {
+  margin: 0 0 1.5rem;
+  font-size: 1rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  animation: greet-content-fade 0.35s ease-out 0.1s backwards;
+}
+
+@keyframes greet-content-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ---- Stage with mic rings while listening ---- */
 .greet-stage {
-  min-height: 130px;
+  min-height: 200px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.875rem;
   margin-bottom: 1.25rem;
 }
 
@@ -50,6 +76,118 @@
   font-size: 0.95rem;
   font-style: italic;
 }
+
+.greet-listening-label {
+  color: var(--primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.greet-ready-hint {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+/* ---- IntelliView branded intro (shown while AI speaks the welcome) ---- */
+.greet-brand-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem 0 0.5rem;
+  animation: greet-brand-fade 0.5s ease-out;
+}
+@keyframes greet-brand-fade {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Concentric pulsing rings around the IV monogram */
+.greet-brand-rings {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.greet-brand-mark {
+  width: 80px;
+  height: 80px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, #8b5cf6));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  box-shadow:
+    0 12px 40px -8px color-mix(in srgb, var(--primary) 70%, transparent),
+    inset 0 2px 6px rgba(255, 255, 255, 0.25);
+  z-index: 2;
+  animation: greet-brand-mark-bob 2.4s ease-in-out infinite;
+}
+@keyframes greet-brand-mark-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+.greet-brand-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  opacity: 0;
+  animation: greet-brand-ring 2.4s ease-out infinite;
+}
+.greet-brand-ring-1 { animation-delay: 0s; }
+.greet-brand-ring-2 { animation-delay: 0.8s; }
+.greet-brand-ring-3 { animation-delay: 1.6s; }
+@keyframes greet-brand-ring {
+  0%   { transform: scale(0.55); opacity: 0.85; }
+  100% { transform: scale(1.6);  opacity: 0;    }
+}
+
+/* Wordmark — fades in letter-by-letter */
+.greet-brand-wordmark {
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  background: linear-gradient(180deg,
+    var(--text-primary) 0%,
+    color-mix(in srgb, var(--primary) 50%, var(--text-primary)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 4px 24px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.greet-brand-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--primary);
+  padding: 4px 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.greet-link-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: inherit;
+  padding: 4px 10px;
+}
+.greet-link-btn:hover { color: var(--text-primary); }
 
 .greet-rings {
   position: relative;

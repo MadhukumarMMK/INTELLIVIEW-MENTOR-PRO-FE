@@ -812,12 +812,14 @@ export default function Interview() {
             const rawText = typeof questions[currentIdx] === 'object'
                 ? questions[currentIdx].question
                 : questions[currentIdx];
-            // Expo mode: open the very first question with a formal greeting
-            // by name. Subsequent questions read normally so we don't repeat.
+            // Expo mode: open the very first question with a brief formal
+            // greeting by name. We don't repeat "Welcome to IntelliView" here
+            // — that's been said already on the GreetPage. Just a quick
+            // personal greeting before the first question.
             const isFirstQuestion = currentIdx === 0;
             const trimmedName = (candidateName || "").trim();
             const textToSpeak = (isFirstQuestion && trimmedName)
-                ? `Good day, ${trimmedName}. Welcome to your IntelliView interview. Let us begin with the first question. ${rawText}`
+                ? `Good day, ${trimmedName}. Let us begin with the first question. ${rawText}`
                 : rawText;
             speak(textToSpeak);
         }

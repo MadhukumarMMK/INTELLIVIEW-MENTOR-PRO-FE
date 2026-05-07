@@ -19,29 +19,27 @@ export default function Leaderboard() {
     const intervalRef = useRef(null);
 
     useEffect(() => {
-        // Quickly check if expo mode is on. If off, show a friendly notice
-        // instead of the board (the route is still reachable, just empty).
-        axios.get("/admin/settings")
-            .then(res => setEnabled(!!res.data?.expo_mode))
-            .catch(() => setEnabled(true)); // fail open — still try to load
-    }, []);
-
-    useEffect(() => {
         let alive = true;
-        const fetchBoard = async () => {
+        // Single combined fetch: pull settings + leaderboard together so the
+        // expo_mode flag stays in sync with the live data. Re-runs every 10s
+        // so admin toggle changes take effect without a page refresh.
+        const refresh = async () => {
             try {
-                const res = await axios.get("/admin/leaderboard?limit=20");
+                const [settingsRes, boardRes] = await Promise.all([
+                    axios.get("/admin/settings"),
+                    axios.get("/admin/leaderboard?limit=20")
+                ]);
                 if (!alive) return;
-                setRows(res.data?.leaderboard || []);
+                setEnabled(!!settingsRes.data?.expo_mode);
+                setRows(boardRes.data?.leaderboard || []);
             } catch (err) {
                 console.error("Leaderboard fetch error:", err);
             } finally {
                 if (alive) setLoading(false);
             }
         };
-        fetchBoard();
-        // Poll every 10 seconds for live updates
-        intervalRef.current = setInterval(fetchBoard, 10000);
+        refresh();
+        intervalRef.current = setInterval(refresh, 10000);
         return () => {
             alive = false;
             if (intervalRef.current) clearInterval(intervalRef.current);

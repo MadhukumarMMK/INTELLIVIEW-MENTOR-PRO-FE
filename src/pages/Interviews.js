@@ -32,7 +32,7 @@ export default function Interviews() {
     if (user.roll_no) fetchSlotInfo();
   }, [user.roll_no]);
 
-  const handleStartInterview = (mode) => {
+  const handleStartInterview = async (mode) => {
     if (activeInterviewsCount >= maxSlots) {
       notify.confirm(
         "You've reached your interview limit. Archive an old interview from My Interviews to free a slot.\n\nGo there now?",
@@ -53,9 +53,17 @@ export default function Interviews() {
       }
     }
 
-    // Expo Mode: route through the voice-led name capture page first.
-    // Real-user mode skips this and goes straight to setup.
-    if (expoMode) {
+    // Re-read expo_mode at click time so admin toggle changes take effect
+    // immediately for the next visitor — no page refresh needed. Falls back
+    // to the cached value if the request fails.
+    let isExpoNow = expoMode;
+    try {
+      const s = await axios.get("/admin/settings");
+      isExpoNow = !!s.data?.expo_mode;
+      if (isExpoNow !== expoMode) setExpoMode(isExpoNow);
+    } catch (_) { /* fall back to cached value */ }
+
+    if (isExpoNow) {
       navigate("/interview/greet", { state: { mode } });
       return;
     }
